@@ -82,6 +82,9 @@ if not boats:
 plovilo = st.selectbox("Odaberi plovilo", boats)
 df = load_sheet(plovilo)
 inicijalni = st.number_input("Inicijalni unos (ako postoji)", min_value=0, step=1)
+# Osiguraj da postoji stupac attachments
+if "attachments" not in df.columns:
+    df["attachments"] = ""
 
 
 # ---------------- INFO ----------------
