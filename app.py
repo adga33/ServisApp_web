@@ -94,6 +94,140 @@ if st.sidebar.button("Dodaj plovilo"):
 # ---------------- MAIN ----------------
 
 st.title("⛵ Evidencija servisa plovila")
+tabs = st.tabs([
+    "➕ Novi zapis",
+    "📑 Pregled",
+    "✏️ Uredi",
+    "📎 Dokumenti",
+    "💾 Backup",
+    "📄 PDF izvještaj"
+])
+with tabs[0]:
+    st.subheader("➕ Dodaj novi zapis")
+
+    colA, colB = st.columns(2)
+
+    with colA:
+        datum = st.date_input("Datum", key="new_record_date")
+        sati = st.number_input("Radni sati", min_value=0, step=1)
+
+    with colB:
+        vrsta = st.selectbox(
+            "Vrsta unosa",
+            ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"],
+            key="new_record_type"
+        )
+        napomena = st.text_input("Napomena", key="new_record_note")
+
+    uploaded_files = st.file_uploader(
+        "📎 Priloži slike ili dokumente",
+        type=["jpg", "jpeg", "png", "pdf"],
+        accept_multiple_files=True,
+        key="upload_new_record"
+    )
+
+    if st.button("💾 Spremi zapis", key="save_new_record"):
+        # tvoja logika spremanja ostaje ista
+        pass
+with tabs[1]:
+    st.subheader("📑 Pregled zapisa")
+
+    search = st.text_input("Pretraga", key="search_records")
+
+    if search:
+        df_filtered = df[df.apply(lambda row: row.astype(str).str.contains(search, case=False).any(), axis=1)]
+    else:
+        df_filtered = df
+
+    st.dataframe(
+        df_filtered.style.apply(highlight_servis, axis=1),
+        use_container_width=True
+    )
+with tabs[2]:
+    st.subheader("✏️ Uredi zapis")
+
+    if df.empty:
+        st.info("Nema zapisa za uređivanje.")
+    else:
+        index_to_edit = st.selectbox(
+            "Odaberi zapis",
+            df.index,
+            format_func=lambda i: f"{df.loc[i, 'datum']} – {df.loc[i, 'vrsta unosa']} – {df.loc[i, 'trenutni radni sati']} h"
+        )
+
+        edit_row = df.loc[index_to_edit]
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            new_datum = st.date_input(
+                "Datum",
+                datetime.strptime(edit_row["datum"], "%d.%m.%Y"),
+                key="edit_record_date"
+            )
+            new_sati = st.number_input(
+                "Trenutni radni sati",
+                min_value=0,
+                value=int(edit_row["trenutni radni sati"])
+            )
+            new_vrsta = st.selectbox(
+                "Vrsta unosa",
+                ["Servis", "Tehnički pregled", "Popravak", "Izlaz", "Ostalo"],
+                index=["Servis", "Tehnički pregled", "Popravak", "Izlaz", "Ostalo"].index(edit_row["vrsta unosa"])
+            )
+
+        with col2:
+            new_napomena = st.text_input("Napomena", edit_row["Napomena"])
+
+        if st.button("💾 Spremi izmjene", key="save_edit_record"):
+            # tvoja logika spremanja ostaje ista
+            pass
+with tabs[3]:
+    st.subheader("📎 Dokumenti")
+
+    if df.empty:
+        st.info("Nema zapisa.")
+    else:
+        index_to_update = st.number_input(
+            "Odaberi zapis",
+            min_value=0,
+            max_value=len(df)-1,
+            step=1,
+            key="doc_record_index"
+        )
+
+        folder = df.loc[index_to_update, "attachments"]
+
+        if folder and os.path.exists(folder):
+            st.write("📂 Postojeći dokumenti:")
+            for f in os.listdir(folder):
+                path = os.path.join(folder, f)
+                if f.lower().endswith((".jpg", ".jpeg", ".png")):
+                    st.image(path, width=200)
+                st.download_button(f"Preuzmi {f}", open(path, "rb").read(), file_name=f)
+
+        new_files = st.file_uploader(
+            "Dodaj nove dokumente",
+            type=["jpg", "jpeg", "png", "pdf"],
+            accept_multiple_files=True,
+            key="upload_existing_docs"
+        )
+
+        if st.button("📥 Spremi dokumente", key="save_new_docs"):
+            # tvoja logika spremanja ostaje ista
+            pass
+with tabs[4]:
+    st.subheader("💾 Backup")
+
+    if st.button("Napravi backup", key="backup_button"):
+        file = backup_excel()
+        st.success(f"Backup spremljen kao: {file}")
+with tabs[5]:
+    st.subheader("📄 PDF izvještaj")
+
+    if st.button("Generiraj PDF izvještaj", key="pdf_button"):
+        # tvoja logika PDF-a ostaje ista
+        pass
 
 boats = get_boats()
 
