@@ -300,9 +300,12 @@ else:
     )
 st.subheader("📎 Dodaj dokumente postojećem zapisu")
 
+# Osiguraj da postoji stupac attachments
+if "attachments" not in df.columns:
+    df["attachments"] = ""
+
 if not df.empty:
 
-    # Odaberi zapis po indeksu
     index_to_update = st.number_input(
         "Odaberi zapis (redni broj)",
         min_value=0,
@@ -313,9 +316,9 @@ if not df.empty:
     st.write("Odabrani zapis:")
     st.write(df.iloc[index_to_update])
 
-    # Prikaži postojeće dokumente
     folder = df.loc[index_to_update, "attachments"]
 
+    # Prikaz postojećih dokumenata
     if folder and folder.strip() != "" and os.path.exists(folder):
         st.write("📂 Postojeći dokumenti:")
         for f in os.listdir(folder):
@@ -334,7 +337,8 @@ if not df.empty:
     new_files = st.file_uploader(
         "Dodaj nove slike/dokumente",
         type=["jpg", "jpeg", "png", "pdf"],
-        accept_multiple_files=True
+        accept_multiple_files=True,
+        key="upload_existing_record"
     )
 
     if st.button("📥 Spremi nove dokumente"):
