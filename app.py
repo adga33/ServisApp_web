@@ -155,14 +155,17 @@ uploaded_files = st.file_uploader(
 )
 
 if st.button("Spremi zapis"):
- # 1) Generiraj ID zapisa
+
+    # 1) Generiraj ID zapisa
     record_id = datetime.now().strftime("%Y%m%d_%H%M%S")
-  # 2) Odredi servis_raden
+
+    # 2) Odredi servis_raden
     if vrsta == "Servis":
         servis_raden = sati
     else:
         servis_raden = zadnji
 
+    # 3) Kreiraj osnovni zapis
     data = {
         "datum": datum.strftime("%d.%m.%Y"),
         "trenutni radni sati": sati,
@@ -171,18 +174,20 @@ if st.button("Spremi zapis"):
         "do servisa": sljedeci - sati,
         "vrsta unosa": vrsta,
         "Napomena": napomena,
-	"attachments": ""
+        "attachments": ""
     }
 
+    # 4) Spremi fajlove
+    if uploaded_files:
+        from database import save_uploaded_files
+        folder, saved_files = save_uploaded_files(plovilo, record_id, uploaded_files)
+        data["attachments"] = folder
 
-# Spremi fajlove
-if uploaded_files:
-    from database import save_uploaded_files
-    folder, saved_files = save_uploaded_files(plovilo, record_id, uploaded_files)
-    data["attachments"] = folder
-  append_row(plovilo, data)
-  st.success("Zapis spremljen!")
-  st.rerun()
+    # 5) Spremi red u Excel
+    append_row(plovilo, data)
+
+    st.success("Zapis spremljen!")
+    st.rerun()
 
 # ---------------- PREGLED ----------------
 
