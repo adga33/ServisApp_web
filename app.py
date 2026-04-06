@@ -29,7 +29,6 @@ setup_logging()
 from database import backup_excel
 backup_excel()
 
-import streamlit as st
 if "confirm_delete" not in st.session_state:
     st.session_state.confirm_delete = False
 import pandas as pd
