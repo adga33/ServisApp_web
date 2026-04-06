@@ -340,7 +340,7 @@ if not df.empty:
         "Dodaj nove slike/dokumente",
         type=["jpg", "jpeg", "png", "pdf"],
         accept_multiple_files=True,
-        key="upload_existing_record"
+        key=f"upload_existing_record_block_{index_to_update}"
     )
 
     if st.button("📥 Spremi nove dokumente"):
