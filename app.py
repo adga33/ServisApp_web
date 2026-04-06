@@ -2,17 +2,15 @@
 #  LOGIN SISTEM
 # -----------------------------
 
-# Hash lozinke (primjer: "servis123")
-PASSWORD_HASH = hashlib.sha256("servis123".encode()).hexdigest()
+PLAIN_PASSWORD = "servis123"
+PASSWORD_HASH = hashlib.sha256(PLAIN_PASSWORD.encode()).hexdigest()
 
 def check_password(password):
     return hashlib.sha256(password.encode()).hexdigest() == PASSWORD_HASH
 
 def login_screen():
     st.title("🔐 Prijava u ServisApp")
-
     password = st.text_input("Lozinka", type="password")
-
     if st.button("Prijavi se"):
         if check_password(password):
             st.session_state["logged_in"] = True
@@ -20,7 +18,6 @@ def login_screen():
         else:
             st.error("Pogrešna lozinka.")
 
-# Ako korisnik NIJE prijavljen → prikaži login i zaustavi app
 if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
     login_screen()
     st.stop()
