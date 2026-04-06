@@ -102,4 +102,16 @@ def save_uploaded_files(boat, record_id, files):
         saved_files.append(file_path)
 
     return folder, saved_files
+def add_files_to_record(folder, files):
+    """Dodaje nove fajlove u postojeći folder zapisa."""
+    os.makedirs(folder, exist_ok=True)
+    saved_files = []
+
+    for file in files:
+        file_path = os.path.join(folder, file.name)
+        with open(file_path, "wb") as f:
+            f.write(file.getbuffer())
+        saved_files.append(file_path)
+
+    return saved_files
 

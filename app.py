@@ -232,6 +232,46 @@ if "attachments" in df.columns:
 # ---------------- UREĐIVANJE I BRISANJE ----------------
 
 st.subheader("✏️ Uredi ili obriši zapise")
+st.subheader("📎 Dodaj dokumente postojećem zapisu")
+
+if not df.empty:
+    # Odaberi zapis
+    index_to_update = st.number_input(
+        "Broj zapisa (redni broj)", 
+        min_value=0, 
+        max_value=len(df)-1, 
+        step=1
+    )
+
+    st.write("Odabrani zapis:")
+    st.write(df.iloc[index_to_update])
+
+    new_files = st.file_uploader(
+        "Dodaj nove slike/dokumente",
+        type=["jpg", "jpeg", "png", "pdf"],
+        accept_multiple_files=True
+    )
+
+    if st.button("📥 Spremi nove dokumente"):
+        from database import add_files_to_record
+
+        # Ako zapis nema folder → kreiraj ga
+        folder = df.loc[index_to_update, "attachments"]
+
+        if not folder or folder.strip() == "":
+            # Kreiraj novi folder
+            record_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+            folder = f"uploads/{plovilo}/{record_id}"
+            df.loc[index_to_update, "attachments"] = folder
+
+        # Spremi nove fajlove
+        add_files_to_record(folder, new_files)
+
+        # Spremi ažurirani Excel
+        save_sheet(plovilo, df)
+
+        st.success("Dokumenti dodani!")
+        st.rerun()
 
 if df.empty:
     st.info("Nema zapisa za prikaz.")
