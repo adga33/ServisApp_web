@@ -155,6 +155,9 @@ uploaded_files = st.file_uploader(
 )
 
 if st.button("Spremi zapis"):
+ # 1) Generiraj ID zapisa
+    record_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+  # 2) Odredi servis_raden
     if vrsta == "Servis":
         servis_raden = sati
     else:
@@ -168,21 +171,18 @@ if st.button("Spremi zapis"):
         "do servisa": sljedeci - sati,
         "vrsta unosa": vrsta,
         "Napomena": napomena,
+	"attachments": ""
     }
 
-# Generiraj ID zapisa
-record_id = datetime.now().strftime("%Y%m%d_%H%M%S")
 
 # Spremi fajlove
 if uploaded_files:
     from database import save_uploaded_files
     folder, saved_files = save_uploaded_files(plovilo, record_id, uploaded_files)
     data["attachments"] = folder
-else:
-    data["attachments"] = ""
-    append_row(plovilo, data)
-    st.success("Zapis spremljen!")
-    st.rerun()
+  append_row(plovilo, data)
+  st.success("Zapis spremljen!")
+  st.rerun()
 
 # ---------------- PREGLED ----------------
 
