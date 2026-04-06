@@ -87,4 +87,19 @@ def cleanup_old_backups(days=30):
         if file.startswith("backup_excel_baza_") and file.endswith(".xlsx"):
             if os.stat(file).st_mtime < now - days * 86400:
                 os.remove(file)
+import os
+
+def save_uploaded_files(boat, record_id, files):
+    folder = f"uploads/{boat}/{record_id}"
+    os.makedirs(folder, exist_ok=True)
+
+    saved_files = []
+
+    for file in files:
+        file_path = os.path.join(folder, file.name)
+        with open(file_path, "wb") as f:
+            f.write(file.getbuffer())
+        saved_files.append(file_path)
+
+    return folder, saved_files
 

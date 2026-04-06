@@ -148,6 +148,11 @@ with col1:
 
 with col2:
     napomena = st.text_input("Napomena")
+uploaded_files = st.file_uploader(
+    "Dodaj slike ili dokumente",
+    type=["jpg", "jpeg", "png", "pdf"],
+    accept_multiple_files=True
+)
 
 if st.button("Spremi zapis"):
     if vrsta == "Servis":
@@ -165,6 +170,16 @@ if st.button("Spremi zapis"):
         "Napomena": napomena,
     }
 
+# Generiraj ID zapisa
+record_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+# Spremi fajlove
+if uploaded_files:
+    from database import save_uploaded_files
+    folder, saved_files = save_uploaded_files(plovilo, record_id, uploaded_files)
+    data["attachments"] = folder
+else:
+    data["attachments"] = ""
     append_row(plovilo, data)
     st.success("Zapis spremljen!")
     st.rerun()
@@ -189,6 +204,26 @@ st.dataframe(
     df_filtered.style.apply(highlight_servis, axis=1),
     use_container_width=True
 )
+st.subheader("📎 Priloženi dokumenti")
+
+if "attachments" in df.columns:
+    for i, row in df.iterrows():
+        if row["attachments"]:
+            st.write(f"**Zapis {i}:**")
+            folder = row["attachments"]
+            files = os.listdir(folder)
+
+            for f in files:
+                path = os.path.join(folder, f)
+                if f.lower().endswith((".jpg", ".jpeg", ".png")):
+                    st.image(path, width=200)
+                st.download_button(
+                    label=f"Preuzmi {f}",
+                    data=open(path, "rb").read(),
+                    file_name=f
+                )
+
+
 # ---------------- UREĐIVANJE I BRISANJE ----------------
 
 st.subheader("✏️ Uredi ili obriši zapise")
