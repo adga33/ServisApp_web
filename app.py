@@ -155,6 +155,13 @@ uploaded_files = st.file_uploader(
     "Dodaj slike ili dokumente",
     type=["jpg", "jpeg", "png", "pdf"],
     accept_multiple_files=True
+    key="upload_new_record"
+)
+new_files = st.file_uploader(
+    "Dodaj nove slike/dokumente",
+    type=["jpg", "jpeg", "png", "pdf"],
+    accept_multiple_files=True,
+    key="upload_existing_record"
 )
 
 if st.button("Spremi zapis"):
