@@ -226,10 +226,6 @@ else:
 
         st.success("Promjene su spremljene.")
         st.rerun()
-        with col2:
-            if st.button("Odustani"):
-                st.session_state.confirm_delete = False
-
 if df.empty:
     st.info("Nema zapisa za uređivanje.")
 else:
