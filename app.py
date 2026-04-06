@@ -128,13 +128,6 @@ else:
 # ---------------- UNOS ----------------
 
 st.subheader("➕ Dodaj novi zapis")
-st.markdown("""
-<style>
-    .stTextInput, .stNumberInput, .stSelectbox, .stDateInput {
-        max-width: 280px !important;
-    }
-</style>
-""", unsafe_allow_html=True)
 
 colA, colB = st.columns(2)
 
