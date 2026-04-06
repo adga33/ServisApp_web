@@ -143,7 +143,7 @@ st.subheader("➕ Dodaj novi zapis")
 colA, colB = st.columns(2)
 
 with colA:
-    datum = st.date_input("Datum")
+    datum = st.date_input("Datum", key="new_record_date")
     sati = st.number_input("Radni sati", min_value=0, step=1)
 
 with colB:
@@ -405,9 +405,11 @@ else:
 
     with col1:
         new_datum = st.date_input(
-            "Datum",
-            datetime.strptime(edit_row["datum"], "%d.%m.%Y")
-        )
+    "Datum",
+    datetime.strptime(edit_row["datum"], "%d.%m.%Y"),
+    key="edit_record_date"
+)
+
         new_sati = st.number_input(
             "Trenutni radni sati",
             min_value=0,
