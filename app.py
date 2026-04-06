@@ -51,11 +51,22 @@ with st.sidebar.expander("⚙️ Postavke"):
 st.set_page_config(page_title="Servis plovila", layout="wide")
 st.markdown("""
 <style>
-    div[data-testid="stTextInput"] > div > div > input,
-    div[data-testid="stNumberInput"] > div > div > input,
-    div[data-testid="stDateInput"] > div > div > input,
-    div[data-testid="stSelectbox"] > div > div {
+    /* Sužavanje input polja */
+    div[data-testid="stTextInput"] input,
+    div[data-testid="stNumberInput"] input,
+    div[data-testid="stDateInput"] input,
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] {
         max-width: 260px !important;
+    }
+
+    /* Kompaktni gumbi */
+    button[kind="primary"] {
+        width: 100% !important;
+    }
+
+    /* Uredniji razmaci */
+    .block-container {
+        padding-top: 1rem;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -140,25 +151,34 @@ else:
 
 st.subheader("➕ Dodaj novi zapis")
 
-colA, colB = st.columns(2)
+with st.container():
+    colA, colB = st.columns(2)
 
-with colA:
-    datum = st.date_input("Datum", key="new_record_date")
-    sati = st.number_input("Radni sati", min_value=0, step=1)
+    with colA:
+        datum = st.date_input("Datum", key="new_record_date")
+        sati = st.number_input("Radni sati", min_value=0, step=1)
 
-with colB:
-    vrsta = st.selectbox("Vrsta unosa", ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"])
-    napomena = st.text_input("Napomena")
+    with colB:
+        vrsta = st.selectbox(
+            "Vrsta unosa",
+            ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"],
+            key="new_record_type"
+        )
+        napomena = st.text_input("Napomena", key="new_record_note")
 
+    uploaded_files = st.file_uploader(
+        "📎 Priloži slike ili dokumente",
+        type=["jpg", "jpeg", "png", "pdf"],
+        accept_multiple_files=True,
+        key="upload_new_record"
+    )
 
-uploaded_files = st.file_uploader(
-    "Dodaj slike ili dokumente",
-    type=["jpg", "jpeg", "png", "pdf"],
-    accept_multiple_files=True,
-    key="upload_new_record"
-)
+    st.markdown("---")
 
-if st.button("Spremi zapis"):
+    if st.button("💾 Spremi zapis", use_container_width=True):
+        # ... tvoja logika spremanja ostaje ista ...
+        pass
+
 
     # 1) Generiraj ID zapisa
     record_id = datetime.now().strftime("%Y%m%d_%H%M%S")
