@@ -27,6 +27,8 @@ if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
 from utils import setup_logging
 setup_logging()
 from database import backup_excel
+from database import save_sheet
+
 backup_excel()
 
 if "confirm_delete" not in st.session_state:
@@ -341,6 +343,6 @@ from database import cleanup_old_backups
 cleanup_old_backups()
 from database import ensure_excel_exists
 ensure_excel_exists()
-from database import save_sheet
+
 
 
