@@ -216,7 +216,7 @@ else:
 
         # Ponovni izračun servisa nakon uređivanja
         for i in range(len(edited_df)):
-            zadnji, sljedeci, _ = calculate_service_info(edited_df)
+            zadnji, sljedeci, _ = calculate_service_info(edited_df, 0)
             edited_df.loc[i, "servis rađen na"] = zadnji
             edited_df.loc[i, "očekivani servis"] = sljedeci
             edited_df.loc[i, "do servisa"] = sljedeci - int(edited_df.loc[i, "trenutni radni sati"])
