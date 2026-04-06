@@ -288,6 +288,62 @@ else:
         num_rows="dynamic",
         hide_index=True,
     )
+st.subheader("📎 Dodaj dokumente postojećem zapisu")
+
+if not df.empty:
+
+    # Odaberi zapis po indeksu
+    index_to_update = st.number_input(
+        "Odaberi zapis (redni broj)",
+        min_value=0,
+        max_value=len(df)-1,
+        step=1
+    )
+
+    st.write("Odabrani zapis:")
+    st.write(df.iloc[index_to_update])
+
+    # Prikaži postojeće dokumente
+    folder = df.loc[index_to_update, "attachments"]
+
+    if folder and folder.strip() != "" and os.path.exists(folder):
+        st.write("📂 Postojeći dokumenti:")
+        for f in os.listdir(folder):
+            path = os.path.join(folder, f)
+            if f.lower().endswith((".jpg", ".jpeg", ".png")):
+                st.image(path, width=200)
+            st.download_button(
+                label=f"Preuzmi {f}",
+                data=open(path, "rb").read(),
+                file_name=f
+            )
+    else:
+        st.info("Nema dokumenata za ovaj zapis.")
+
+    # Upload novih dokumenata
+    new_files = st.file_uploader(
+        "Dodaj nove slike/dokumente",
+        type=["jpg", "jpeg", "png", "pdf"],
+        accept_multiple_files=True
+    )
+
+    if st.button("📥 Spremi nove dokumente"):
+        from database import add_files_to_record
+
+        # Ako zapis nema folder → kreiraj ga
+        if not folder or folder.strip() == "":
+            record_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+            folder = f"uploads/{plovilo}/{record_id}"
+            df.loc[index_to_update, "attachments"] = folder
+
+        # Spremi nove fajlove
+        add_files_to_record(folder, new_files)
+
+        # Spremi ažurirani Excel
+        save_sheet(plovilo, df)
+
+        st.success("Dokumenti dodani!")
+        st.rerun()
 
     if st.button("💾 Spremi promjene"):
         # Obrisi označene redove
