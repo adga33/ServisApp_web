@@ -246,7 +246,6 @@ st.subheader("📎 Dodaj dokumente postojećem zapisu")
 
 if not df.empty:
 
-    # 1) Odaberi zapis
     index_to_update = st.number_input(
         "Broj zapisa (redni broj)", 
         min_value=0, 
@@ -257,37 +256,32 @@ if not df.empty:
     st.write("Odabrani zapis:")
     st.write(df.iloc[index_to_update])
 
-    # 2) Uploader mora biti OVDJE – unutar bloka
+    # Jedinstveni key koji NE koristi index_to_update
     new_files = st.file_uploader(
         "📎 Dodaj dodatne dokumente",
         type=["jpg", "jpeg", "png", "pdf"],
         accept_multiple_files=True,
-        key=f"upload_existing_record_block_{index_to_update}"
+        key="upload_existing_record_block"
     )
 
-    # 3) Gumb također mora biti u istom bloku
-    if st.button("📥 Spremi nove dokumente", key=f"save_docs_block_{index_to_update}"):
+    if st.button("📥 Spremi nove dokumente", key="save_docs_block"):
 
         from database import add_files_to_record
 
         folder = df.loc[index_to_update, "attachments"]
 
-        # Ako zapis nema folder → kreiraj ga
         if not folder or folder.strip() == "":
             record_id = datetime.now().strftime("%Y%m%d_%H%M%S")
             folder = f"uploads/{plovilo}/{record_id}"
             df.loc[index_to_update, "attachments"] = folder
 
-        # Spremi nove fajlove
         if new_files:
             add_files_to_record(folder, new_files)
 
-        # Spremi Excel
         save_sheet(plovilo, df)
 
         st.success("Dokumenti dodani!")
         st.rerun()
-
 
 
 if df.empty:
