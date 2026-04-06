@@ -187,41 +187,45 @@ st.dataframe(
     df_filtered.style.apply(highlight_servis, axis=1),
     use_container_width=True
 )
-st.subheader("✏️ Uredi zapis")
-st.subheader("🗑️ Obriši zapis")
+# ---------------- UREĐIVANJE I BRISANJE ----------------
+
+st.subheader("✏️ Uredi ili obriši zapise")
 
 if df.empty:
-    st.info("Nema zapisa za brisanje.")
+    st.info("Nema zapisa za prikaz.")
 else:
-    index_to_delete = st.selectbox(
-        "Odaberi zapis za brisanje",
-        df.index,
-        format_func=lambda i: f"{df.loc[i, 'datum']} – {df.loc[i, 'vrsta unosa']} – {df.loc[i, 'trenutni radni sati']} h"
+    st.write("Klikni na bilo koju ćeliju da je uredi. Za brisanje označi red i klikni 'Spremi promjene'.")
+
+    # Dodaj checkbox za brisanje
+    df_edit = df.copy()
+    df_edit["Obriši"] = False
+
+    edited_df = st.data_editor(
+        df_edit,
+        use_container_width=True,
+        num_rows="dynamic",
+        hide_index=True,
     )
 
-    # 1) Klik na "Obriši" samo aktivira popup
-    if st.button("Obriši odabrani zapis"):
-        st.session_state.confirm_delete = True
+    if st.button("💾 Spremi promjene"):
+        # Obrisi označene redove
+        edited_df = edited_df[edited_df["Obriši"] == False].drop(columns=["Obriši"])
 
-    # 2) Ako je popup aktivan — prikaži upozorenje i gumbe
-    if st.session_state.confirm_delete:
-        st.warning("⚠️ Jeste li sigurni da želite obrisati ovaj zapis? Ova radnja je nepovratna.")
+        # Reset index
+        edited_df = edited_df.reset_index(drop=True)
 
-        st.write(f"**Datum:** {df.loc[index_to_delete, 'datum']}")
-        st.write(f"**Vrsta unosa:** {df.loc[index_to_delete, 'vrsta unosa']}")
-        st.write(f"**Radni sati:** {df.loc[index_to_delete, 'trenutni radni sati']} h")
-        st.write(f"**Napomena:** {df.loc[index_to_delete, 'Napomena']}")
+        # Ponovni izračun servisa nakon uređivanja
+        for i in range(len(edited_df)):
+            zadnji, sljedeci, _ = calculate_service_info(edited_df)
+            edited_df.loc[i, "servis rađen na"] = zadnji
+            edited_df.loc[i, "očekivani servis"] = sljedeci
+            edited_df.loc[i, "do servisa"] = sljedeci - int(edited_df.loc[i, "trenutni radni sati"])
 
-        col1, col2 = st.columns(2)
+        # Spremi u Excel
+        save_sheet(plovilo, edited_df)
 
-        with col1:
-            if st.button("Da, obriši"):
-                df = df.drop(index_to_delete).reset_index(drop=True)
-                save_sheet(plovilo, df)
-                st.session_state.confirm_delete = False
-                st.success("Zapis je obrisan.")
-                st.rerun()
-
+        st.success("Promjene su spremljene.")
+        st.rerun()
         with col2:
             if st.button("Odustani"):
                 st.session_state.confirm_delete = False
