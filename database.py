@@ -5,7 +5,26 @@ import datetime
 import pandas as pd
 import streamlit as st
 from config import EXCEL_FILE, SHEETS, COLUMNS
+from openpyxl import load_workbook
 
+EXCEL_FILE = "servisi.xlsx"
+
+def save_sheet(sheet_name, df):
+    """Zamjenjuje postojeći sheet novim DataFrameom."""
+    book = load_workbook(EXCEL_FILE)
+
+    # Ako sheet postoji – obriši ga
+    if sheet_name in book.sheetnames:
+        std = book[sheet_name]
+        book.remove(std)
+
+    # Kreiraj novi sheet
+    book.create_sheet(sheet_name)
+    book.save(EXCEL_FILE)
+
+    # Upis DataFramea
+    with pd.ExcelWriter(EXCEL_FILE, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
+        df.to_excel(writer, sheet_name=sheet_name, index=False)
 
 # -----------------------------
 #  Ensure Excel exists
@@ -68,7 +87,4 @@ def cleanup_old_backups(days=30):
         if file.startswith("backup_excel_baza_") and file.endswith(".xlsx"):
             if os.stat(file).st_mtime < now - days * 86400:
                 os.remove(file)
-def save_sheet(sheet, df):
-    with pd.ExcelWriter(EXCEL_FILE, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
-        df.to_excel(writer, sheet_name=sheet, index=False)
 
