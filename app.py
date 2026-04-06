@@ -128,6 +128,23 @@ else:
 # ---------------- UNOS ----------------
 
 st.subheader("➕ Dodaj novi zapis")
+st.markdown("""
+<style>
+    .stTextInput, .stNumberInput, .stSelectbox, .stDateInput {
+        max-width: 280px !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+colA, colB = st.columns(2)
+
+with colA:
+    datum = st.date_input("Datum")
+    sati = st.number_input("Radni sati", min_value=0, step=1)
+
+with colB:
+    vrsta = st.selectbox("Vrsta unosa", ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"])
+    napomena = st.text_input("Napomena")
 
 col1, col2 = st.columns(2)
 
