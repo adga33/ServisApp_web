@@ -68,3 +68,7 @@ def cleanup_old_backups(days=30):
         if file.startswith("backup_excel_baza_") and file.endswith(".xlsx"):
             if os.stat(file).st_mtime < now - days * 86400:
                 os.remove(file)
+def save_sheet(sheet, df):
+    with pd.ExcelWriter(EXCEL_FILE, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
+        df.to_excel(writer, sheet_name=sheet, index=False)
+
