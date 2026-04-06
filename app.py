@@ -49,6 +49,17 @@ with st.sidebar.expander("⚙️ Postavke"):
     st.write("Ovdje će ići konfiguracija aplikacije.")
 
 st.set_page_config(page_title="Servis plovila", layout="wide")
+st.markdown("""
+<style>
+    div[data-testid="stTextInput"] > div > div > input,
+    div[data-testid="stNumberInput"] > div > div > input,
+    div[data-testid="stDateInput"] > div > div > input,
+    div[data-testid="stSelectbox"] > div > div {
+        max-width: 260px !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 
 # ---------------- SIDEBAR ----------------
 
