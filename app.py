@@ -150,21 +150,6 @@ with colB:
     vrsta = st.selectbox("Vrsta unosa", ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"])
     napomena = st.text_input("Napomena")
 
-col1, col2 = st.columns(2)
-
-with col1:
-    colA, colB = st.columns([1, 1])
-
-with colA:
-    datum = st.date_input("Datum")
-    sati = st.number_input("Radni sati", min_value=0, step=1)
-
-with colB:
-    vrsta = st.selectbox(
-        "Vrsta unosa",
-        ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"]
-    )
-    napomena = st.text_input("Napomena")
 
 uploaded_files = st.file_uploader(
     "Dodaj slike ili dokumente",
