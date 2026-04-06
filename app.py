@@ -256,26 +256,28 @@ if not df.empty:
     st.write("Odabrani zapis:")
     st.write(df.iloc[index_to_update])
 
+    # Jedinstveni key → sprječava DuplicateElementKey
     new_files = st.file_uploader(
         "Dodaj nove slike/dokumente",
         type=["jpg", "jpeg", "png", "pdf"],
-        accept_multiple_files=True
+        accept_multiple_files=True,
+        key=f"upload_existing_record_{index_to_update}"
     )
 
-    if st.button("📥 Spremi nove dokumente"):
+    if st.button("📥 Spremi nove dokumente", key=f"save_docs_{index_to_update}"):
         from database import add_files_to_record
 
         # Ako zapis nema folder → kreiraj ga
         folder = df.loc[index_to_update, "attachments"]
 
         if not folder or folder.strip() == "":
-            # Kreiraj novi folder
             record_id = datetime.now().strftime("%Y%m%d_%H%M%S")
             folder = f"uploads/{plovilo}/{record_id}"
             df.loc[index_to_update, "attachments"] = folder
 
         # Spremi nove fajlove
-        add_files_to_record(folder, new_files)
+        if new_files:
+            add_files_to_record(folder, new_files)
 
         # Spremi ažurirani Excel
         save_sheet(plovilo, df)
