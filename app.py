@@ -154,7 +154,7 @@ with col2:
 uploaded_files = st.file_uploader(
     "Dodaj slike ili dokumente",
     type=["jpg", "jpeg", "png", "pdf"],
-    accept_multiple_files=True
+    accept_multiple_files=True,
     key="upload_new_record"
 )
 new_files = st.file_uploader(
