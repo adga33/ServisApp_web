@@ -129,6 +129,15 @@ if "attachments" not in df.columns:
 inicijalni = st.number_input("Inicijalni unos (ako postoji)", min_value=0, step=1)
 # ---------------- TAB 1: NOVI ZAPIS ----------------
 
+tabs = st.tabs([
+    "Novi zapis",
+    "Pregled",
+    "Uredi",
+    "Dokumenti",
+    "Tehnički pregled",
+    "PDF"
+])
+
 with tabs[0]:
     st.subheader("➕ Dodaj novi zapis")
 
