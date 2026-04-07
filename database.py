@@ -1,28 +1,26 @@
 import sqlite3
 import os
 
-DB_PATH = "database.db"
+DB_NAME = "database.db"
 
 # -----------------------------
 #  CONNECTION
 # -----------------------------
 def get_connection():
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    return conn
+    return sqlite3.connect(DB_NAME, check_same_thread=False)
 
 # -----------------------------
 #  INIT TABLES
 # -----------------------------
 def init_tables():
     conn = get_connection()
-    cur = conn.cursor()
+    c = conn.cursor()
 
-    cur.execute("""
+    c.execute("""
         CREATE TABLE IF NOT EXISTS zapisi (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            plovilo TEXT NOT NULL,
-            datum TEXT NOT NULL,
+            plovilo TEXT,
+            datum TEXT,
             trenutni_radni_sati INTEGER,
             servis_raden_na INTEGER,
             ocekivani_servis INTEGER,
@@ -41,49 +39,49 @@ def init_tables():
 # -----------------------------
 def add_zapis(plovilo, datum, sati, servis_raden, ocekivani, do_servisa, vrsta, napomena, attachments):
     conn = get_connection()
-    cur = conn.cursor()
+    c = conn.cursor()
 
-    cur.execute("""
+    c.execute("""
         INSERT INTO zapisi (
             plovilo, datum, trenutni_radni_sati, servis_raden_na,
             ocekivani_servis, do_servisa, vrsta_unosa, napomena, attachments
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (plovilo, datum, sati, servis_raden, ocekivani, do_servisa, vrsta, napomena, attachments))
 
     conn.commit()
     conn.close()
 
 # -----------------------------
-#  GET RECORDS FOR BOAT
+#  GET RECORDS
 # -----------------------------
 def get_zapisi(plovilo):
     conn = get_connection()
-    cur = conn.cursor()
+    c = conn.cursor()
 
-    cur.execute("""
-        SELECT * FROM zapisi
-        WHERE plovilo = ?
-        ORDER BY id DESC
-    """, (plovilo,))
-
-    rows = cur.fetchall()
+    c.execute("SELECT * FROM zapisi WHERE plovilo=? ORDER BY id DESC", (plovilo,))
+    rows = c.fetchall()
     conn.close()
-    return rows
+
+    cols = [
+        "id", "plovilo", "datum", "trenutni_radni_sati", "servis_raden_na",
+        "ocekivani_servis", "do_servisa", "vrsta_unosa", "napomena", "attachments"
+    ]
+
+    return [dict(zip(cols, row)) for row in rows]
 
 # -----------------------------
 #  UPDATE RECORD
 # -----------------------------
-def update_zapis(id, datum, sati, servis_raden, ocekivani, do_servisa, vrsta, napomena):
+def update_zapis(record_id, datum, sati, servis_raden, ocekivani, do_servisa, vrsta, napomena):
     conn = get_connection()
-    cur = conn.cursor()
+    c = conn.cursor()
 
-    cur.execute("""
-        UPDATE zapisi
-        SET datum = ?, trenutni_radni_sati = ?, servis_raden_na = ?,
-            ocekivani_servis = ?, do_servisa = ?, vrsta_unosa = ?, napomena = ?
-        WHERE id = ?
-    """, (datum, sati, servis_raden, ocekivani, do_servisa, vrsta, napomena, id))
+    c.execute("""
+        UPDATE zapisi SET
+            datum=?, trenutni_radni_sati=?, servis_raden_na=?,
+            ocekivani_servis=?, do_servisa=?, vrsta_unosa=?, napomena=?
+        WHERE id=?
+    """, (datum, sati, servis_raden, ocekivani, do_servisa, vrsta, napomena, record_id))
 
     conn.commit()
     conn.close()
@@ -91,41 +89,34 @@ def update_zapis(id, datum, sati, servis_raden, ocekivani, do_servisa, vrsta, na
 # -----------------------------
 #  DELETE RECORD
 # -----------------------------
-def delete_zapis(id):
+def delete_zapis(record_id):
     conn = get_connection()
-    cur = conn.cursor()
+    c = conn.cursor()
 
-    cur.execute("DELETE FROM zapisi WHERE id = ?", (id,))
+    c.execute("DELETE FROM zapisi WHERE id=?", (record_id,))
     conn.commit()
     conn.close()
 
 # -----------------------------
-#  FILE UPLOAD HANDLING
+#  FILE UPLOADS
 # -----------------------------
-def save_uploaded_files(boat, record_id, files):
-    folder = f"uploads/{boat}/{record_id}"
+def save_uploaded_files(plovilo, record_id, files):
+    folder = f"uploads/{plovilo}/{record_id}"
     os.makedirs(folder, exist_ok=True)
 
     saved_files = []
-
     for file in files:
-        file_path = os.path.join(folder, file.name)
-        with open(file_path, "wb") as f:
+        path = os.path.join(folder, file.name)
+        with open(path, "wb") as f:
             f.write(file.getbuffer())
-        saved_files.append(file_path)
+        saved_files.append(path)
 
     return folder, saved_files
 
-
 def add_files_to_record(folder, files):
     os.makedirs(folder, exist_ok=True)
-    saved_files = []
 
     for file in files:
-        file_path = os.path.join(folder, file.name)
-        with open(file_path, "wb") as f:
+        path = os.path.join(folder, file.name)
+        with open(path, "wb") as f:
             f.write(file.getbuffer())
-        saved_files.append(file_path)
-
-    return saved_files
-

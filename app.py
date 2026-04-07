@@ -118,11 +118,9 @@ if not df.empty:
     df["id"] = df["id"].astype(int)
     df = df.sort_values("id", ascending=False).reset_index(drop=True)
 
-# Osiguraj da je Napomena string
 if "napomena" in df.columns:
     df["napomena"] = df["napomena"].astype(str)
 
-# Osiguraj da postoji stupac attachments
 if "attachments" not in df.columns:
     df["attachments"] = ""
 
@@ -134,7 +132,7 @@ inicijalni = st.number_input("Inicijalni unos (ako postoji)", min_value=0, step=
 
 zadnji, sljedeci, do_servisa = calculate_service_info(df, inicijalni)
 
-st.info(f"🔧 Zadnji servis: **{zadnji} h** | Sljedeći servis: **{sljedeci} h** | Do servisa: **{do_servisa} h**")
+st.info(f"🔧 Zadnji servis: {zadnji} h | Sljedeći servis: {sljedeci} h | Do servisa: {do_servisa} h")
 
 # ---------------- TABOVI ----------------
 
@@ -176,7 +174,6 @@ with tabs[0]:
     if st.button("💾 Spremi zapis", key="save_new_record"):
         record_id = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-        # Izračuni
         if vrsta == "Servis":
             servis_raden = sati
         else:
