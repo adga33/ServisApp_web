@@ -127,6 +127,8 @@ if "attachments" not in df.columns:
     df["attachments"] = ""
 
 inicijalni = st.number_input("Inicijalni unos (ako postoji)", min_value=0, step=1)
+zadnji, sljedeci, do_servisa = calculate_service_info(df, inicijalni)
+
 # ---------------- TAB 1: NOVI ZAPIS ----------------
 
 tabs = st.tabs([
