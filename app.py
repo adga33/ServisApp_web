@@ -115,6 +115,9 @@ if not boats:
 
 plovilo = st.selectbox("Odaberi plovilo", boats)
 df = load_sheet(plovilo)
+# Osiguraj da je Napomena string
+if "Napomena" in df.columns:
+    df["Napomena"] = df["Napomena"].astype(str)
 
 # Osiguraj da postoji stupac attachments
 if "attachments" not in df.columns:
