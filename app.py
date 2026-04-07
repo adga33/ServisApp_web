@@ -126,10 +126,17 @@ if "napomena" in df.columns:
 if "attachments" not in df.columns:
     df["attachments"] = ""
 
+# -----------------------------
+#  SERVISNI IZRAČUNI
+# -----------------------------
+
 inicijalni = st.number_input("Inicijalni unos (ako postoji)", min_value=0, step=1)
+
 zadnji, sljedeci, do_servisa = calculate_service_info(df, inicijalni)
 
-# ---------------- TAB 1: NOVI ZAPIS ----------------
+st.info(f"🔧 Zadnji servis: **{zadnji} h** | Sljedeći servis: **{sljedeci} h** | Do servisa: **{do_servisa} h**")
+
+# ---------------- TABOVI ----------------
 
 tabs = st.tabs([
     "Novi zapis",
@@ -139,6 +146,8 @@ tabs = st.tabs([
     "Tehnički pregled",
     "PDF"
 ])
+
+# ---------------- TAB 1: NOVI ZAPIS ----------------
 
 with tabs[0]:
     st.subheader("➕ Dodaj novi zapis")
@@ -167,7 +176,7 @@ with tabs[0]:
     if st.button("💾 Spremi zapis", key="save_new_record"):
         record_id = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-        # Izračuni kao prije
+        # Izračuni
         if vrsta == "Servis":
             servis_raden = sati
         else:
@@ -176,16 +185,13 @@ with tabs[0]:
         ocekivani = sljedeci
         do_servisa_val = sljedeci - sati
 
-        # Formatiranje datuma
         datum_str = datum.strftime("%d.%m.%Y")
 
-        # Upload dokumenata
         attachments = ""
         if uploaded_files:
             folder, saved_files = save_uploaded_files(plovilo, record_id, uploaded_files)
             attachments = folder
 
-        # Spremanje u SQLite
         add_zapis(
             plovilo,
             datum_str,
@@ -225,6 +231,7 @@ with tabs[1]:
         df_filtered.style.apply(highlight_servis, axis=1),
         use_container_width=True
     )
+
 # ---------------- TAB 3: UREDI ----------------
 
 with tabs[2]:
@@ -270,7 +277,6 @@ with tabs[2]:
                 key="edit_record_note"
             )
 
-        # Ponovni izračuni
         if new_vrsta == "Servis":
             new_servis_raden = new_sati
         else:
@@ -346,7 +352,6 @@ with tabs[3]:
             if new_files:
                 add_files_to_record(folder, new_files)
 
-                # Ažuriraj putanju u bazi
                 update_zapis(
                     record_id,
                     df.loc[index_to_update, "datum"],
@@ -362,6 +367,22 @@ with tabs[3]:
                 st.rerun()
             else:
                 st.warning("Nema odabranih dokumenata za spremanje.")
+
+# ---------------- TAB 5: TEHNIČKI PREGLED ----------------
+
+with tabs[4]:
+    st.subheader("🛠 Tehnički pregled")
+
+    if df.empty:
+        st.info("Nema zapisa.")
+    else:
+        expiry, days_left = calculate_tech_info(df)
+
+        if expiry:
+            st.success(f"Tehnički vrijedi do: **{expiry.strftime('%d.%m.%Y')}**")
+            st.info(f"Preostalo dana: **{days_left}**")
+        else:
+            st.warning("Nema tehničkog pregleda evidentiranog.")
 
 # ---------------- TAB 6: PDF IZVJEŠTAJ ----------------
 

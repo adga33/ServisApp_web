@@ -42,30 +42,39 @@ def create_new_boat(name):
 # -----------------------------
 def calculate_service_info(df, inicijalni):
     """
-    Izračun zadnjeg servisa, sljedećeg servisa i preostalog vremena.
-    Očekuje DataFrame iz SQLite-a.
+    Pravila:
+    - Ako inicijalni = 0 → prvi servis na 20h
+    - Nakon prvog servisa → svakih 100h
+    - Ako inicijalni > 0 → prvi servis na inicijalni + 100h
     """
 
+    # Ako nema zapisa uopće
     if df.empty:
-        return inicijalni, inicijalni + 100, 100
+        if inicijalni == 0:
+            return 0, 20, 20
+        else:
+            return inicijalni, inicijalni + 100, 100
 
-    # Zadnji servis
+    # Ako postoje zapisi, tražimo zadnji servis
     df_servis = df[df["vrsta_unosa"] == "Servis"]
 
+    # Ako nema servisa, ali ima drugih zapisa
     if df_servis.empty:
-        zadnji = inicijalni
-    else:
-        zadnji = int(df_servis.iloc[0]["trenutni_radni_sati"])
+        trenutni = int(df.iloc[0]["trenutni_radni_sati"])
 
-    # Sljedeći servis svakih 100h
+        if inicijalni == 0:
+            sljedeci = 20
+        else:
+            sljedeci = inicijalni + 100
+
+        do_servisa = sljedeci - trenutni
+        return inicijalni, sljedeci, do_servisa
+
+    # Ako postoje servisi
+    zadnji = int(df_servis.iloc[0]["trenutni_radni_sati"])
     sljedeci = zadnji + 100
 
-    # Preostalo
-    if not df.empty:
-        trenutni = int(df.iloc[0]["trenutni_radni_sati"])
-    else:
-        trenutni = inicijalni
-
+    trenutni = int(df.iloc[0]["trenutni_radni_sati"])
     do_servisa = sljedeci - trenutni
 
     return zadnji, sljedeci, do_servisa
