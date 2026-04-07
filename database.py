@@ -1,94 +1,107 @@
-import os
-import time
-import shutil
-import datetime
-import pandas as pd
-import streamlit as st
-from config import EXCEL_FILE, SHEETS, COLUMNS
-from openpyxl import load_workbook
-
-EXCEL_FILE = "servisi.xlsx"
-
-def save_sheet(sheet_name, df):
-    """Zamjenjuje postojeći sheet novim DataFrameom."""
-    book = load_workbook(EXCEL_FILE)
-
-    # Ako sheet postoji – obriši ga
-    if sheet_name in book.sheetnames:
-        std = book[sheet_name]
-        book.remove(std)
-
-    # Kreiraj novi sheet
-    book.create_sheet(sheet_name)
-    book.save(EXCEL_FILE)
-
-    # Upis DataFramea
-    with pd.ExcelWriter(EXCEL_FILE, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
-        df.to_excel(writer, sheet_name=sheet_name, index=False)
-
-# -----------------------------
-#  Ensure Excel exists
-# -----------------------------
-def ensure_excel_exists():
-    if not os.path.exists(EXCEL_FILE):
-        writer = pd.ExcelWriter(EXCEL_FILE, engine="openpyxl")
-        for sheet in SHEETS:
-            df = pd.DataFrame(columns=COLUMNS)
-            df.to_excel(writer, sheet_name=sheet, index=False)
-        writer.close()
-
-
-# -----------------------------
-#  Load sheet
-# -----------------------------
-def load_sheet(sheet):
-    ensure_excel_exists()
-    try:
-        df = pd.read_excel(EXCEL_FILE, sheet_name=sheet)
-        return df
-    except Exception:
-        st.error("Nešto je pošlo krivo pri učitavanju podataka.")
-        return pd.DataFrame(columns=COLUMNS)
-
-
-# -----------------------------
-#  Append row
-# -----------------------------
-def append_row(sheet, data):
-    df = load_sheet(sheet)
-    df.loc[len(df)] = data
-
-    try:
-        with pd.ExcelWriter(EXCEL_FILE, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
-            df.to_excel(writer, sheet_name=sheet, index=False)
-    except Exception:
-        st.error("Nešto je pošlo krivo pri spremanju podataka.")
-
-
-# -----------------------------
-#  Backup Excel
-# -----------------------------
-def backup_excel():
-    try:
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_name = f"backup_excel_baza_{timestamp}.xlsx"
-        shutil.copy(EXCEL_FILE, backup_name)
-        st.success("Backup napravljen.")
-    except Exception:
-        st.error("Nešto je pošlo krivo pri izradi backup-a.")
-
-
-# -----------------------------
-#  Cleanup old backups
-# -----------------------------
-def cleanup_old_backups(days=30):
-    now = time.time()
-    for file in os.listdir():
-        if file.startswith("backup_excel_baza_") and file.endswith(".xlsx"):
-            if os.stat(file).st_mtime < now - days * 86400:
-                os.remove(file)
+import sqlite3
 import os
 
+DB_PATH = "database.db"
+
+# -----------------------------
+#  CONNECTION
+# -----------------------------
+def get_connection():
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+# -----------------------------
+#  INIT TABLES
+# -----------------------------
+def init_tables():
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS zapisi (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            plovilo TEXT NOT NULL,
+            datum TEXT NOT NULL,
+            trenutni_radni_sati INTEGER,
+            servis_raden_na INTEGER,
+            ocekivani_servis INTEGER,
+            do_servisa INTEGER,
+            vrsta_unosa TEXT,
+            napomena TEXT,
+            attachments TEXT
+        )
+    """)
+
+    conn.commit()
+    conn.close()
+
+# -----------------------------
+#  ADD RECORD
+# -----------------------------
+def add_zapis(plovilo, datum, sati, servis_raden, ocekivani, do_servisa, vrsta, napomena, attachments):
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        INSERT INTO zapisi (
+            plovilo, datum, trenutni_radni_sati, servis_raden_na,
+            ocekivani_servis, do_servisa, vrsta_unosa, napomena, attachments
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (plovilo, datum, sati, servis_raden, ocekivani, do_servisa, vrsta, napomena, attachments))
+
+    conn.commit()
+    conn.close()
+
+# -----------------------------
+#  GET RECORDS FOR BOAT
+# -----------------------------
+def get_zapisi(plovilo):
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT * FROM zapisi
+        WHERE plovilo = ?
+        ORDER BY id DESC
+    """, (plovilo,))
+
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
+# -----------------------------
+#  UPDATE RECORD
+# -----------------------------
+def update_zapis(id, datum, sati, servis_raden, ocekivani, do_servisa, vrsta, napomena):
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        UPDATE zapisi
+        SET datum = ?, trenutni_radni_sati = ?, servis_raden_na = ?,
+            ocekivani_servis = ?, do_servisa = ?, vrsta_unosa = ?, napomena = ?
+        WHERE id = ?
+    """, (datum, sati, servis_raden, ocekivani, do_servisa, vrsta, napomena, id))
+
+    conn.commit()
+    conn.close()
+
+# -----------------------------
+#  DELETE RECORD
+# -----------------------------
+def delete_zapis(id):
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute("DELETE FROM zapisi WHERE id = ?", (id,))
+    conn.commit()
+    conn.close()
+
+# -----------------------------
+#  FILE UPLOAD HANDLING
+# -----------------------------
 def save_uploaded_files(boat, record_id, files):
     folder = f"uploads/{boat}/{record_id}"
     os.makedirs(folder, exist_ok=True)
@@ -102,20 +115,9 @@ def save_uploaded_files(boat, record_id, files):
         saved_files.append(file_path)
 
     return folder, saved_files
-def add_files_to_record(folder, files):
-    """Dodaje nove fajlove u postojeći folder zapisa."""
-    os.makedirs(folder, exist_ok=True)
-    saved_files = []
 
-    for file in files:
-        file_path = os.path.join(folder, file.name)
-        with open(file_path, "wb") as f:
-            f.write(file.getbuffer())
-        saved_files.append(file_path)
 
-    return saved_files
 def add_files_to_record(folder, files):
-    """Dodaje nove fajlove u postojeći folder zapisa."""
     os.makedirs(folder, exist_ok=True)
     saved_files = []
 

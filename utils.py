@@ -1,121 +1,94 @@
+import os
+import logging
 import pandas as pd
 from datetime import datetime, timedelta
-import os
-import shutil
 
-EXCEL_FILE = "servisi.xlsx"
+# -----------------------------
+#  LOGGING
+# -----------------------------
+def setup_logging():
+    logging.basicConfig(
+        filename="app.log",
+        level=logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(message)s"
+    )
+    logging.info("Aplikacija pokrenuta.")
 
-COLUMNS = [
-    "datum",
-    "trenutni radni sati",
-    "servis rađen na",
-    "očekivani servis",
-    "do servisa",
-    "vrsta unosa",
-    "Napomena",
-]
 
+# -----------------------------
+#  BOATS MANAGEMENT
+# -----------------------------
 def get_boats():
-    if not os.path.exists(EXCEL_FILE):
-        return []
-    return pd.ExcelFile(EXCEL_FILE).sheet_names
+    """Vraća listu plovila (foldera u uploads/)."""
+    if not os.path.exists("uploads"):
+        os.makedirs("uploads")
 
-def create_new_boat(name: str):
-    df = pd.DataFrame(columns=COLUMNS)
+    boats = [
+        name for name in os.listdir("uploads")
+        if os.path.isdir(os.path.join("uploads", name))
+    ]
 
-    mode = "w" if not os.path.exists(EXCEL_FILE) else "a"
+    return sorted(boats)
 
-    with pd.ExcelWriter(EXCEL_FILE, mode=mode, if_sheet_exists="new") as writer:
-        df.to_excel(writer, sheet_name=name, index=False)
 
-def load_sheet(sheet):
-    return pd.read_excel(EXCEL_FILE, sheet_name=sheet)
+def create_new_boat(name):
+    """Kreira novi folder za plovilo."""
+    path = os.path.join("uploads", name)
+    os.makedirs(path, exist_ok=True)
 
-def save_sheet(sheet, df):
-    with pd.ExcelWriter(EXCEL_FILE, mode="a", if_sheet_exists="replace") as writer:
-        df.to_excel(writer, sheet_name=sheet, index=False)
 
-def append_row(sheet, data):
-    df = load_sheet(sheet)
-    df.loc[len(df)] = data
-    save_sheet(sheet, df)
-
-def backup_excel():
-    backup_name = f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-    shutil.copy(EXCEL_FILE, backup_name)
-    return backup_name
-
+# -----------------------------
+#  SERVICE INFO CALCULATIONS
+# -----------------------------
 def calculate_service_info(df, inicijalni):
-    df_servisi = df[df["vrsta unosa"] == "Servis"]
+    """
+    Izračun zadnjeg servisa, sljedećeg servisa i preostalog vremena.
+    Očekuje DataFrame iz SQLite-a.
+    """
 
-    # izračun prvog servisa
-    prvi_servis = calculate_first_service(inicijalni)
+    if df.empty:
+        return inicijalni, inicijalni + 100, 100
 
-    if df_servisi.empty:
-        zadnji = 0
-        sljedeci = prvi_servis
+    # Zadnji servis
+    df_servis = df[df["vrsta_unosa"] == "Servis"]
+
+    if df_servis.empty:
+        zadnji = inicijalni
     else:
-        zadnji = int(df_servisi.iloc[-1]["servis rađen na"])
-        broj_servisa = len(df_servisi)
-        sljedeci = prvi_servis + broj_servisa * 100
+        zadnji = int(df_servis.iloc[0]["trenutni_radni_sati"])
 
-    try:
-        trenutni = int(df.iloc[-1]["trenutni radni sati"])
-    except:
-        trenutni = 0
+    # Sljedeći servis svakih 100h
+    sljedeci = zadnji + 100
+
+    # Preostalo
+    if not df.empty:
+        trenutni = int(df.iloc[0]["trenutni_radni_sati"])
+    else:
+        trenutni = inicijalni
 
     do_servisa = sljedeci - trenutni
+
     return zadnji, sljedeci, do_servisa
 
+
+# -----------------------------
+#  TECHNICAL INSPECTION INFO
+# -----------------------------
 def calculate_tech_info(df):
-    df_tech = df[df["vrsta unosa"] == "Tehnički pregled"]
+    """
+    Izračun tehničkog pregleda.
+    Očekuje DataFrame iz SQLite-a.
+    """
+
+    df_tech = df[df["vrsta_unosa"] == "Tehnički pregled"]
 
     if df_tech.empty:
         return None, None
 
-    zadnji = df_tech.iloc[-1]["datum"]
-    zadnji_date = datetime.strptime(zadnji, "%d.%m.%Y")
-    istek = zadnji_date + timedelta(days=365 * 2)
-    dana = (istek - datetime.now()).days
+    last_date_str = df_tech.iloc[0]["datum"]
+    last_date = datetime.strptime(last_date_str, "%d.%m.%Y")
 
-    return istek, dana
-def load_sheet(sheet):
-    df = pd.read_excel(EXCEL_FILE, sheet_name=sheet)
+    expiry_date = last_date + timedelta(days=365)
+    days_left = (expiry_date - datetime.now()).days
 
-    # ⬇️ OVO DODAJ — ako sheet nema kolone, dodaj ih
-    if df.empty or list(df.columns) != COLUMNS:
-        df = pd.DataFrame(columns=COLUMNS)
-
-    return df
-def calculate_first_service(inicijalni):
-    if inicijalni == 0:
-        return 20
-    return inicijalni + 10
-import logging
-import os
-
-def setup_logging():
-    os.makedirs("logs", exist_ok=True)
-    logging.basicConfig(
-        filename="logs/app.log",
-        level=logging.INFO,
-        format="%(asctime)s - %(levelname)s - %(message)s"
-    )
-from fpdf import FPDF
-
-class PDF(FPDF):
-    def header(self):
-        self.set_font("DejaVu", size=14)
-        self.cell(0, 10, "Servisni Izvještaj", ln=True, align="C")
-
-def create_pdf(data, filename="servisi_report.pdf"):
-    pdf = PDF()
-    pdf.add_page()
-    pdf.add_font("DejaVu", "", "DejaVuSans.ttf", uni=True)
-    pdf.set_font("DejaVu", size=12)
-
-    for key, value in data.items():
-        pdf.cell(0, 10, f"{key}: {value}", ln=True)
-
-    pdf.output(filename)
-
+    return expiry_date, days_left

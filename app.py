@@ -1,3 +1,15 @@
+from database import (
+    init_tables,
+    add_zapis,
+    get_zapisi,
+    update_zapis,
+    delete_zapis,
+    save_uploaded_files,
+    add_files_to_record
+)
+
+init_tables()
+
 import streamlit as st
 import hashlib
 import os
@@ -9,19 +21,8 @@ from utils import (
     setup_logging,
     get_boats,
     create_new_boat,
-    load_sheet,
-    append_row,
-    backup_excel,
     calculate_service_info,
     calculate_tech_info,
-)
-from database import (
-    backup_excel as db_backup_excel,
-    save_sheet,
-    save_uploaded_files,
-    add_files_to_record,
-    cleanup_old_backups,
-    ensure_excel_exists,
 )
 
 # -----------------------------
@@ -31,10 +32,8 @@ from database import (
 PLAIN_PASSWORD = "servis123"
 PASSWORD_HASH = hashlib.sha256(PLAIN_PASSWORD.encode()).hexdigest()
 
-
 def check_password(password):
     return hashlib.sha256(password.encode()).hexdigest() == PASSWORD_HASH
-
 
 def login_screen():
     st.title("🔐 Prijava u ServisApp")
@@ -46,7 +45,6 @@ def login_screen():
         else:
             st.error("Pogrešna lozinka.")
 
-
 if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
     login_screen()
     st.stop()
@@ -56,9 +54,6 @@ if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
 # -----------------------------
 
 setup_logging()
-db_backup_excel()
-cleanup_old_backups()
-ensure_excel_exists()
 
 if "confirm_delete" not in st.session_state:
     st.session_state.confirm_delete = False
@@ -114,63 +109,24 @@ if not boats:
     st.stop()
 
 plovilo = st.selectbox("Odaberi plovilo", boats)
-df = load_sheet(plovilo)
+
+# --- UČITAVANJE IZ SQLITE ---
+rows = get_zapisi(plovilo)
+df = pd.DataFrame(rows)
+
+if not df.empty:
+    df["id"] = df["id"].astype(int)
+    df = df.sort_values("id", ascending=False).reset_index(drop=True)
+
 # Osiguraj da je Napomena string
-if "Napomena" in df.columns:
-    df["Napomena"] = df["Napomena"].astype(str)
+if "napomena" in df.columns:
+    df["napomena"] = df["napomena"].astype(str)
 
 # Osiguraj da postoji stupac attachments
 if "attachments" not in df.columns:
     df["attachments"] = ""
 
 inicijalni = st.number_input("Inicijalni unos (ako postoji)", min_value=0, step=1)
-
-# ---------------- INFO ----------------
-
-st.subheader("📌 Informacije o servisu")
-
-zadnji, sljedeci, do_servisa = calculate_service_info(df, inicijalni)
-
-col1, col2, col3 = st.columns(3)
-col1.metric("Zadnji servis", f"{zadnji} h")
-col2.metric("Sljedeći servis", f"{sljedeci} h")
-col3.metric("Preostalo do servisa", f"{do_servisa} h")
-
-# ---------------- TEHNIČKI ----------------
-
-df_tech = df[df["vrsta unosa"] == "Tehnički pregled"]
-
-if not df_tech.empty:
-    zadnji_tech = df_tech.iloc[-1]["datum"]
-    st.info(f"📅 Zadnji tehnički pregled: **{zadnji_tech}**")
-else:
-    st.info("📅 Zadnji tehnički pregled: nije evidentiran.")
-
-st.subheader("📌 Tehnički pregled")
-
-istek, dana = calculate_tech_info(df)
-
-if istek is None:
-    st.info("Tehnički pregled nije evidentiran.")
-else:
-    if dana < 0:
-        st.error(f"Tehnički istekao prije {abs(dana)} dana!")
-    elif dana < 30:
-        st.warning(f"Tehnički istječe za {dana} dana.")
-    else:
-        st.success(f"Tehnički vrijedi do {istek.strftime('%d.%m.%Y')} ({dana} dana).")
-
-# ---------------- TABS ----------------
-
-tabs = st.tabs([
-    "➕ Novi zapis",
-    "📑 Pregled",
-    "✏️ Uredi",
-    "📎 Dokumenti",
-    "💾 Backup",
-    "📄 PDF izvještaj",
-])
-
 # ---------------- TAB 1: NOVI ZAPIS ----------------
 
 with tabs[0]:
@@ -200,27 +156,36 @@ with tabs[0]:
     if st.button("💾 Spremi zapis", key="save_new_record"):
         record_id = datetime.now().strftime("%Y%m%d_%H%M%S")
 
+        # Izračuni kao prije
         if vrsta == "Servis":
             servis_raden = sati
         else:
             servis_raden = zadnji
 
-        data = {
-            "datum": datum.strftime("%d.%m.%Y"),
-            "trenutni radni sati": sati,
-            "servis rađen na": servis_raden,
-            "očekivani servis": sljedeci,
-            "do servisa": sljedeci - sati,
-            "vrsta unosa": vrsta,
-            "Napomena": napomena,
-            "attachments": ""
-        }
+        ocekivani = sljedeci
+        do_servisa_val = sljedeci - sati
 
+        # Formatiranje datuma
+        datum_str = datum.strftime("%d.%m.%Y")
+
+        # Upload dokumenata
+        attachments = ""
         if uploaded_files:
             folder, saved_files = save_uploaded_files(plovilo, record_id, uploaded_files)
-            data["attachments"] = folder
+            attachments = folder
 
-        append_row(plovilo, data)
+        # Spremanje u SQLite
+        add_zapis(
+            plovilo,
+            datum_str,
+            sati,
+            servis_raden,
+            ocekivani,
+            do_servisa_val,
+            vrsta,
+            napomena,
+            attachments
+        )
 
         st.success("Zapis spremljen!")
         st.rerun()
@@ -228,10 +193,9 @@ with tabs[0]:
 # ---------------- TAB 2: PREGLED ----------------
 
 def highlight_servis(row):
-    if row["vrsta unosa"] == "Servis":
+    if row["vrsta_unosa"] == "Servis":
         return ["background-color: #ffcccc"] * len(row)
     return [""] * len(row)
-
 
 with tabs[1]:
     st.subheader("📑 Pregled zapisa")
@@ -250,7 +214,6 @@ with tabs[1]:
         df_filtered.style.apply(highlight_servis, axis=1),
         use_container_width=True
     )
-
 # ---------------- TAB 3: UREDI ----------------
 
 with tabs[2]:
@@ -262,10 +225,11 @@ with tabs[2]:
         index_to_edit = st.selectbox(
             "Odaberi zapis za uređivanje",
             df.index,
-            format_func=lambda i: f"{df.loc[i, 'datum']} – {df.loc[i, 'vrsta unosa']} – {df.loc[i, 'trenutni radni sati']} h"
+            format_func=lambda i: f"{df.loc[i, 'datum']} – {df.loc[i, 'vrsta_unosa']} – {df.loc[i, 'trenutni_radni_sati']} h"
         )
 
         edit_row = df.loc[index_to_edit]
+        record_id = int(edit_row["id"])
 
         col1, col2 = st.columns(2)
 
@@ -278,35 +242,43 @@ with tabs[2]:
             new_sati = st.number_input(
                 "Trenutni radni sati",
                 min_value=0,
-                value=int(edit_row["trenutni radni sati"]),
+                value=int(edit_row["trenutni_radni_sati"]),
                 key="edit_record_hours"
             )
             new_vrsta = st.selectbox(
                 "Vrsta unosa",
-                ["Servis", "Tehnički pregled", "Popravak", "Izlaz", "Ostalo"],
-                index=["Servis", "Tehnički pregled", "Popravak", "Izlaz", "Ostalo"].index(edit_row["vrsta unosa"]),
+                ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"],
+                index=["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"].index(edit_row["vrsta_unosa"]),
                 key="edit_record_type"
             )
 
         with col2:
             new_napomena = st.text_input(
                 "Napomena",
-                edit_row["Napomena"],
+                edit_row["napomena"],
                 key="edit_record_note"
             )
 
+        # Ponovni izračuni
+        if new_vrsta == "Servis":
+            new_servis_raden = new_sati
+        else:
+            new_servis_raden = edit_row["servis_raden_na"]
+
+        new_ocekivani = edit_row["ocekivani_servis"]
+        new_do_servisa = new_ocekivani - new_sati
+
         if st.button("💾 Spremi izmjene", key="save_edit_record"):
-            df.loc[index_to_edit, "datum"] = new_datum.strftime("%d.%m.%Y")
-            df.loc[index_to_edit, "trenutni radni sati"] = new_sati
-            df.loc[index_to_edit, "vrsta unosa"] = new_vrsta
-            df.loc[index_to_edit, "Napomena"] = new_napomena
-
-            zadnji_calc, sljedeci_calc, _ = calculate_service_info(df, inicijalni)
-            df.loc[index_to_edit, "servis rađen na"] = zadnji_calc
-            df.loc[index_to_edit, "očekivani servis"] = sljedeci_calc
-            df.loc[index_to_edit, "do servisa"] = sljedeci_calc - new_sati
-
-            save_sheet(plovilo, df)
+            update_zapis(
+                record_id,
+                new_datum.strftime("%d.%m.%Y"),
+                new_sati,
+                new_servis_raden,
+                new_ocekivani,
+                new_do_servisa,
+                new_vrsta,
+                new_napomena
+            )
 
             st.success("Zapis je uspješno izmijenjen.")
             st.rerun()
@@ -331,6 +303,7 @@ with tabs[3]:
         st.write(df.iloc[index_to_update])
 
         folder = df.loc[index_to_update, "attachments"]
+        record_id = df.loc[index_to_update, "id"]
 
         if folder and folder.strip() != "" and os.path.exists(folder):
             st.write("📂 Postojeći dokumenti:")
@@ -356,26 +329,28 @@ with tabs[3]:
 
         if st.button("📥 Spremi nove dokumente", key="save_new_docs"):
             if not folder or folder.strip() == "":
-                record_id = datetime.now().strftime("%Y%m%d_%H%M%S")
                 folder = f"uploads/{plovilo}/{record_id}"
-                df.loc[index_to_update, "attachments"] = folder
+                os.makedirs(folder, exist_ok=True)
 
             if new_files:
                 add_files_to_record(folder, new_files)
-                save_sheet(plovilo, df)
+
+                # Ažuriraj putanju u bazi
+                update_zapis(
+                    record_id,
+                    df.loc[index_to_update, "datum"],
+                    df.loc[index_to_update, "trenutni_radni_sati"],
+                    df.loc[index_to_update, "servis_raden_na"],
+                    df.loc[index_to_update, "ocekivani_servis"],
+                    df.loc[index_to_update, "do_servisa"],
+                    df.loc[index_to_update, "vrsta_unosa"],
+                    df.loc[index_to_update, "napomena"]
+                )
+
                 st.success("Dokumenti dodani!")
                 st.rerun()
             else:
                 st.warning("Nema odabranih dokumenata za spremanje.")
-
-# ---------------- TAB 5: BACKUP ----------------
-
-with tabs[4]:
-    st.subheader("💾 Backup")
-
-    if st.button("Napravi backup", key="backup_button"):
-        file = db_backup_excel()
-        st.success(f"Backup spremljen kao: {file}")
 
 # ---------------- TAB 6: PDF IZVJEŠTAJ ----------------
 
@@ -387,7 +362,11 @@ with tabs[5]:
         rows = []
 
         for boat in boats_all:
-            df_boat = load_sheet(boat)
+            df_boat = pd.DataFrame(get_zapisi(boat))
+            if df_boat.empty:
+                rows.append((boat, "-", "-"))
+                continue
+
             zadnji_b, sljedeci_b, do_servisa_b = calculate_service_info(df_boat, 0)
             rows.append((boat, zadnji_b, do_servisa_b))
 
