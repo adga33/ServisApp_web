@@ -279,7 +279,9 @@ with tabs[2]:
         else:
             new_servis_raden = edit_row["servis_raden_na"]
 
-        new_ocekivani = edit_row["ocekivani_servis"]
+       val = edit_row["ocekivani_servis"]
+	new_ocekivani = int(val) if val not in (None, "", "None") else 0
+
         new_do_servisa = new_ocekivani - new_sati
 
         if st.button("💾 Spremi izmjene", key="save_edit_record"):
