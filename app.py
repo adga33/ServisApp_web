@@ -5,10 +5,12 @@ from database import (
     update_zapis,
     delete_zapis,
     save_uploaded_files,
-    add_files_to_record
+    add_files_to_record,
+    migrate_database
 )
 
 init_tables()
+migrate_database()
 
 import streamlit as st
 import hashlib
@@ -55,46 +57,7 @@ if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
 
 setup_logging()
 
-if "confirm_delete" not in st.session_state:
-    st.session_state.confirm_delete = False
-
 st.set_page_config(page_title="Servis plovila", layout="wide")
-
-st.markdown("""
-<style>
-    div[data-testid="stTextInput"] input,
-    div[data-testid="stNumberInput"] input,
-    div[data-testid="stDateInput"] input,
-    div[data-testid="stSelectbox"] div[data-baseweb="select"] {
-        max-width: 260px !important;
-    }
-    button[kind="primary"] {
-        width: 100% !important;
-    }
-    .block-container {
-        padding-top: 1rem;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# ---------------- SIDEBAR ----------------
-
-st.sidebar.title("⚙️ Postavke")
-
-st.sidebar.subheader("➕ Dodaj novo plovilo")
-novo_plovilo = st.sidebar.text_input("Naziv novog plovila")
-
-boats = get_boats()
-
-if st.sidebar.button("Dodaj plovilo"):
-    if not novo_plovilo.strip():
-        st.sidebar.error("Unesi ispravan naziv.")
-    elif novo_plovilo in boats:
-        st.sidebar.warning("Plovilo već postoji.")
-    else:
-        create_new_boat(novo_plovilo.strip())
-        st.sidebar.success(f"Plovilo '{novo_plovilo}' je dodano.")
-        st.rerun()
 
 # ---------------- MAIN ----------------
 
@@ -111,15 +74,20 @@ plovilo = st.selectbox("Odaberi plovilo", boats)
 rows = get_zapisi(plovilo)
 df = pd.DataFrame(rows)
 
+# SIGURNOSNO: osiguraj sve stupce
+required_cols = [
+    "id", "plovilo", "datum", "trenutni_radni_sati", "servis_raden_na",
+    "ocekivani_servis", "do_servisa", "vrsta_unosa", "napomena", "attachments"
+]
+
+for col in required_cols:
+    if col not in df.columns:
+        df[col] = None
+
 if not df.empty:
     df["id"] = df["id"].astype(int)
     df = df.sort_values("id", ascending=False).reset_index(drop=True)
-
-if "napomena" in df.columns:
     df["napomena"] = df["napomena"].astype(str)
-
-if "attachments" not in df.columns:
-    df["attachments"] = ""
 
 # -----------------------------
 #  SERVISNI IZRAČUNI
@@ -147,44 +115,31 @@ tabs = st.tabs([
 with tabs[0]:
     st.subheader("➕ Dodaj novi zapis")
 
-    colA, colB = st.columns(2)
-
-    with colA:
-        datum = st.date_input("Datum", key="new_record_date")
-        sati = st.number_input("Radni sati", min_value=0, step=1, key="new_record_hours")
-
-    with colB:
-        vrsta = st.selectbox(
-            "Vrsta unosa",
-            ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"],
-            key="new_record_type"
-        )
-        napomena = st.text_input("Napomena", key="new_record_note")
+    datum = st.date_input("Datum")
+    sati = st.number_input("Radni sati", min_value=0, step=1)
+    vrsta = st.selectbox("Vrsta unosa", ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"])
+    napomena = st.text_input("Napomena")
 
     uploaded_files = st.file_uploader(
         "📎 Priloži slike ili dokumente",
         type=["jpg", "jpeg", "png", "pdf"],
-        accept_multiple_files=True,
-        key="upload_new_record"
+        accept_multiple_files=True
     )
 
-    if st.button("💾 Spremi zapis", key="save_new_record"):
+    if st.button("💾 Spremi zapis"):
 
-        # Format datuma
         datum_str = datum.strftime("%d.%m.%Y")
 
-        # -------------------------
-        #  PROVJERA DUPLIKATA
-        # -------------------------
-        duplikat = df[
-            (df["datum"] == datum_str) &
-            (df["trenutni_radni_sati"] == sati) &
-            (df["vrsta_unosa"] == vrsta)
-        ]
-
-        if not duplikat.empty:
-            st.error("⚠️ Ovaj zapis već postoji! Provjeri datum, sate i vrstu unosa.")
-            st.stop()
+        # SIGURNOSNO: provjera duplikata
+        if not df.empty:
+            duplikat = df[
+                (df["datum"] == datum_str) &
+                (df["trenutni_radni_sati"] == sati) &
+                (df["vrsta_unosa"] == vrsta)
+            ]
+            if not duplikat.empty:
+                st.error("⚠️ Ovaj zapis već postoji!")
+                st.stop()
 
         record_id = datetime.now().strftime("%Y%m%d_%H%M%S")
 
@@ -218,28 +173,9 @@ with tabs[0]:
 
 # ---------------- TAB 2: PREGLED ----------------
 
-def highlight_servis(row):
-    if row["vrsta_unosa"] == "Servis":
-        return ["background-color: #ffcccc"] * len(row)
-    return [""] * len(row)
-
 with tabs[1]:
     st.subheader("📑 Pregled zapisa")
-
-    search = st.text_input("Pretraga", key="search_records")
-
-    if search:
-        df_filtered = df[df.apply(
-            lambda row: row.astype(str).str.contains(search, case=False).any(),
-            axis=1
-        )]
-    else:
-        df_filtered = df
-
-    st.dataframe(
-        df_filtered.style.apply(highlight_servis, axis=1),
-        use_container_width=True
-    )
+    st.dataframe(df, use_container_width=True)
 
 # ---------------- TAB 3: UREDI ----------------
 
@@ -247,50 +183,21 @@ with tabs[2]:
     st.subheader("✏️ Uredi zapis")
 
     if df.empty:
-        st.info("Nema zapisa za uređivanje.")
+        st.info("Nema zapisa.")
     else:
         index_to_edit = st.selectbox(
-            "Odaberi zapis za uređivanje",
+            "Odaberi zapis",
             df.index,
-            format_func=lambda i: f"{df.loc[i, 'datum']} – {df.loc[i, 'vrsta_unosa']} – {df.loc[i, 'trenutni_radni_sati']} h"
+            format_func=lambda i: f"{df.loc[i,'datum']} – {df.loc[i,'vrsta_unosa']} – {df.loc[i,'trenutni_radni_sati']} h"
         )
 
         edit_row = df.loc[index_to_edit]
         record_id = int(edit_row["id"])
 
-        # Sigurnosna konverzija
-        try:
-            edit_row["ocekivani_servis"] = int(edit_row["ocekivani_servis"])
-        except:
-            edit_row["ocekivani_servis"] = 0
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            new_datum = st.date_input(
-                "Datum",
-                datetime.strptime(edit_row["datum"], "%d.%m.%Y"),
-                key="edit_record_date"
-            )
-            new_sati = st.number_input(
-                "Trenutni radni sati",
-                min_value=0,
-                value=int(edit_row["trenutni_radni_sati"]),
-                key="edit_record_hours"
-            )
-            new_vrsta = st.selectbox(
-                "Vrsta unosa",
-                ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"],
-                index=["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"].index(edit_row["vrsta_unosa"]),
-                key="edit_record_type"
-            )
-
-        with col2:
-            new_napomena = st.text_input(
-                "Napomena",
-                edit_row["napomena"],
-                key="edit_record_note"
-            )
+        new_datum = st.date_input("Datum", datetime.strptime(edit_row["datum"], "%d.%m.%Y"))
+        new_sati = st.number_input("Radni sati", min_value=0, value=int(edit_row["trenutni_radni_sati"]))
+        new_vrsta = st.selectbox("Vrsta unosa", ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"], index=["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"].index(edit_row["vrsta_unosa"]))
+        new_napomena = st.text_input("Napomena", edit_row["napomena"])
 
         if new_vrsta == "Servis":
             new_servis_raden = new_sati
@@ -300,7 +207,7 @@ with tabs[2]:
         new_ocekivani = edit_row["ocekivani_servis"]
         new_do_servisa = new_ocekivani - new_sati
 
-        if st.button("💾 Spremi izmjene", key="save_edit_record"):
+        if st.button("💾 Spremi izmjene"):
             update_zapis(
                 record_id,
                 new_datum.strftime("%d.%m.%Y"),
@@ -311,16 +218,12 @@ with tabs[2]:
                 new_vrsta,
                 new_napomena
             )
-
-            st.success("Zapis je uspješno izmijenjen.")
+            st.success("Zapis izmijenjen.")
             st.rerun()
 
-        # -------------------------
-        #  BRISANJE ZAPISA
-        # -------------------------
-        if st.button("🗑️ Obriši zapis", key="delete_record"):
+        if st.button("🗑️ Obriši zapis"):
             delete_zapis(record_id)
-            st.success("Zapis je obrisan.")
+            st.success("Zapis obrisan.")
             st.rerun()
 
 # ---------------- TAB 4: DOKUMENTI ----------------
@@ -331,128 +234,48 @@ with tabs[3]:
     if df.empty:
         st.info("Nema zapisa.")
     else:
-        index_to_update = st.number_input(
-            "Odaberi zapis (redni broj)",
-            min_value=0,
-            max_value=len(df) - 1,
-            step=1,
-            key="doc_record_index"
-        )
-
-        st.write("Odabrani zapis:")
-        st.write(df.iloc[index_to_update])
-
+        index_to_update = st.number_input("Odaberi zapis", min_value=0, max_value=len(df)-1, step=1)
         folder = df.loc[index_to_update, "attachments"]
         record_id = df.loc[index_to_update, "id"]
 
-        if folder and folder.strip() != "" and os.path.exists(folder):
-            st.write("📂 Postojeći dokumenti:")
+        if folder and os.path.exists(folder):
             for f in os.listdir(folder):
                 path = os.path.join(folder, f)
-                if f.lower().endswith((".jpg", ".jpeg", ".png")):
-                    st.image(path, width=200)
-                st.download_button(
-                    label=f"Preuzmi {f}",
-                    data=open(path, "rb").read(),
-                    file_name=f,
-                    key=f"download_{index_to_update}_{f}"
-                )
-        else:
-            st.info("Nema dokumenata za ovaj zapis.")
+                st.download_button(f"Preuzmi {f}", open(path, "rb").read(), file_name=f)
 
-        new_files = st.file_uploader(
-            "Dodaj nove slike/dokumente",
-            type=["jpg", "jpeg", "png", "pdf"],
-            accept_multiple_files=True,
-            key="upload_existing_docs"
-        )
+        new_files = st.file_uploader("Dodaj dokumente", type=["jpg","jpeg","png","pdf"], accept_multiple_files=True)
 
-        if st.button("📥 Spremi nove dokumente", key="save_new_docs"):
-            if not folder or folder.strip() == "":
-                folder = f"uploads/{plovilo}/{record_id}"
-                os.makedirs(folder, exist_ok=True)
-
+        if st.button("📥 Spremi nove dokumente"):
             if new_files:
                 add_files_to_record(folder, new_files)
-
-                update_zapis(
-                    record_id,
-                    df.loc[index_to_update, "datum"],
-                    df.loc[index_to_update, "trenutni_radni_sati"],
-                    df.loc[index_to_update, "servis_raden_na"],
-                    df.loc[index_to_update, "ocekivani_servis"],
-                    df.loc[index_to_update, "do_servisa"],
-                    df.loc[index_to_update, "vrsta_unosa"],
-                    df.loc[index_to_update, "napomena"]
-                )
-
-                st.success("Dokumenti dodani!")
+                st.success("Dokumenti dodani.")
                 st.rerun()
-            else:
-                st.warning("Nema odabranih dokumenata za spremanje.")
 
 # ---------------- TAB 5: TEHNIČKI PREGLED ----------------
 
 with tabs[4]:
     st.subheader("🛠 Tehnički pregled")
 
-    if df.empty:
-        st.info("Nema zapisa.")
+    expiry, days_left = calculate_tech_info(df)
+
+    if expiry:
+        st.success(f"Vrijedi do: {expiry.strftime('%d.%m.%Y')}")
+        st.info(f"Preostalo dana: {days_left}")
     else:
-        expiry, days_left = calculate_tech_info(df)
+        st.warning("Nema tehničkog pregleda.")
 
-        if expiry:
-            st.success(f"Tehnički vrijedi do: **{expiry.strftime('%d.%m.%Y')}**")
-            st.info(f"Preostalo dana: **{days_left}**")
-        else:
-            st.warning("Nema tehničkog pregleda evidentiranog.")
-
-# ---------------- TAB 6: PDF IZVJEŠTAJ ----------------
+# ---------------- TAB 6: PDF ----------------
 
 with tabs[5]:
-    st.subheader("📄 Izvještaj za sva plovila")
+    st.subheader("📄 PDF izvještaj")
 
-    if st.button("Generiraj PDF izvještaj", key="pdf_button"):
-        boats_all = get_boats()
-        rows = []
-
-        for boat in boats_all:
-            df_boat = pd.DataFrame(get_zapisi(boat))
-            if df_boat.empty:
-                rows.append((boat, "-", "-"))
-                continue
-
-            zadnji_b, sljedeci_b, do_servisa_b = calculate_service_info(df_boat, 0)
-            rows.append((boat, zadnji_b, do_servisa_b))
-
+    if st.button("Generiraj PDF"):
         pdf = FPDF()
         pdf.add_page()
+        pdf.set_font("Arial", size=12)
 
-        pdf.add_font("DejaVu", "", "DejaVuSans.ttf", uni=True)
-        pdf.set_font("DejaVu", "", 14)
+        for _, row in df.iterrows():
+            pdf.cell(0, 10, txt=str(row), ln=True)
 
-        pdf.cell(0, 10, txt="Izvještaj o zadnjim radnim satima i preostalom vremenu do servisa", ln=True, align='C')
-
-        datum_generiranja = datetime.now().strftime("%d.%m.%Y")
-        pdf.ln(5)
-        pdf.set_font("DejaVu", "", 12)
-        pdf.cell(0, 10, txt=f"Datum generiranja: {datum_generiranja}", ln=True, align='L')
-        pdf.ln(10)
-
-        pdf.set_font("DejaVu", "", 11)
-        pdf.cell(60, 8, "Plovilo", 1)
-        pdf.cell(60, 8, "Zadnji radni sati", 1)
-        pdf.cell(60, 8, "Do servisa", 1)
-        pdf.ln()
-
-        for boat, zadnji_sati, do_servisa_val in rows:
-            pdf.cell(60, 8, boat, 1)
-            pdf.cell(60, 8, str(zadnji_sati), 1)
-            pdf.cell(60, 8, str(do_servisa_val), 1)
-            pdf.ln()
-
-        pdf_file = "servisi_report.pdf"
-        pdf.output(pdf_file)
-
-        with open(pdf_file, "rb") as f:
-            st.download_button("📥 Preuzmi PDF", f, file_name=pdf_file)
+        pdf.output("report.pdf")
+        st.download_button("Preuzmi PDF", open("report.pdf","rb"), file_name="report.pdf")
