@@ -81,9 +81,6 @@ st.markdown("""
 
 st.sidebar.title("⚙️ Postavke")
 
-with st.sidebar.expander("⚙️ Postavke aplikacije"):
-    st.write("Ovdje će ići konfiguracija aplikacije.")
-
 st.sidebar.subheader("➕ Dodaj novo plovilo")
 novo_plovilo = st.sidebar.text_input("Naziv novog plovila")
 
@@ -172,6 +169,23 @@ with tabs[0]:
     )
 
     if st.button("💾 Spremi zapis", key="save_new_record"):
+
+        # Format datuma
+        datum_str = datum.strftime("%d.%m.%Y")
+
+        # -------------------------
+        #  PROVJERA DUPLIKATA
+        # -------------------------
+        duplikat = df[
+            (df["datum"] == datum_str) &
+            (df["trenutni_radni_sati"] == sati) &
+            (df["vrsta_unosa"] == vrsta)
+        ]
+
+        if not duplikat.empty:
+            st.error("⚠️ Ovaj zapis već postoji! Provjeri datum, sate i vrstu unosa.")
+            st.stop()
+
         record_id = datetime.now().strftime("%Y%m%d_%H%M%S")
 
         if vrsta == "Servis":
@@ -181,8 +195,6 @@ with tabs[0]:
 
         ocekivani = sljedeci
         do_servisa_val = sljedeci - sati
-
-        datum_str = datum.strftime("%d.%m.%Y")
 
         attachments = ""
         if uploaded_files:
@@ -246,6 +258,12 @@ with tabs[2]:
         edit_row = df.loc[index_to_edit]
         record_id = int(edit_row["id"])
 
+        # Sigurnosna konverzija
+        try:
+            edit_row["ocekivani_servis"] = int(edit_row["ocekivani_servis"])
+        except:
+            edit_row["ocekivani_servis"] = 0
+
         col1, col2 = st.columns(2)
 
         with col1:
@@ -279,12 +297,7 @@ with tabs[2]:
         else:
             new_servis_raden = edit_row["servis_raden_na"]
 
-       new_ocekivani = edit_row["ocekivani_servis"]
-    val = edit_row["ocekivani_servis"]
-    new_ocekivani = int(val) if val not in (None, "", "None") else 0
-
-
-
+        new_ocekivani = edit_row["ocekivani_servis"]
         new_do_servisa = new_ocekivani - new_sati
 
         if st.button("💾 Spremi izmjene", key="save_edit_record"):
@@ -300,6 +313,14 @@ with tabs[2]:
             )
 
             st.success("Zapis je uspješno izmijenjen.")
+            st.rerun()
+
+        # -------------------------
+        #  BRISANJE ZAPISA
+        # -------------------------
+        if st.button("🗑️ Obriši zapis", key="delete_record"):
+            delete_zapis(record_id)
+            st.success("Zapis je obrisan.")
             st.rerun()
 
 # ---------------- TAB 4: DOKUMENTI ----------------
