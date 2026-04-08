@@ -136,9 +136,7 @@ with tabs[0]:
 
     datum = st.date_input("Datum")
 
-    # -----------------------------
-    #  POLJE ZA RADNE SATE BEZ 0
-    # -----------------------------
+    # POLJE ZA RADNE SATE BEZ 0
     sati_input = st.text_input("Radni sati", placeholder="Unesi radne sate")
 
     if sati_input.strip() == "":
@@ -225,16 +223,38 @@ with tabs[2]:
         index_to_edit = st.selectbox(
             "Odaberi zapis",
             df.index,
-            format_func=lambda i: f"{df.loc[i,'datum']} – {df.loc[i,'vrsta_unosa']} – {df.loc[i,'trenutni_radni_sati']} h"
+            format_func=lambda i: f"{df.loc[i,'datum']} – {df.loc[i,'vrsta_unosa']} – {df.loc[i,'trenutni_radni_sati']} h",
+            key="edit_odabir_zapisa"
         )
 
         edit_row = df.loc[index_to_edit]
         record_id = int(edit_row["id"])
 
-        new_datum = st.date_input("Datum", datetime.strptime(edit_row["datum"], "%d.%m.%Y"))
-        new_sati = st.number_input("Radni sati", min_value=0, value=int(edit_row["trenutni_radni_sati"]))
-        new_vrsta = st.selectbox("Vrsta unosa", ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"], index=["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"].index(edit_row["vrsta_unosa"]))
-        new_napomena = st.text_input("Napomena", edit_row["napomena"])
+        new_datum = st.date_input(
+            "Datum",
+            datetime.strptime(edit_row["datum"], "%d.%m.%Y"),
+            key=f"edit_datum_{record_id}"
+        )
+
+        new_sati = st.number_input(
+            "Radni sati",
+            min_value=0,
+            value=int(edit_row["trenutni_radni_sati"]),
+            key=f"edit_sati_{record_id}"
+        )
+
+        new_vrsta = st.selectbox(
+            "Vrsta unosa",
+            ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"],
+            index=["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"].index(edit_row["vrsta_unosa"]),
+            key=f"edit_vrsta_{record_id}"
+        )
+
+        new_napomena = st.text_input(
+            "Napomena",
+            edit_row["napomena"],
+            key=f"edit_napomena_{record_id}"
+        )
 
         if new_vrsta == "Servis":
             new_servis_raden = new_sati
@@ -244,7 +264,7 @@ with tabs[2]:
         new_ocekivani = edit_row["ocekivani_servis"]
         new_do_servisa = new_ocekivani - new_sati
 
-        if st.button("💾 Spremi izmjene"):
+        if st.button("💾 Spremi izmjene", key=f"edit_spremi_{record_id}"):
             update_zapis(
                 record_id,
                 new_datum.strftime("%d.%m.%Y"),
@@ -258,7 +278,7 @@ with tabs[2]:
             st.success("Zapis izmijenjen.")
             st.rerun()
 
-        if st.button("🗑️ Obriši zapis"):
+        if st.button("🗑️ Obriši zapis", key=f"edit_obrisi_{record_id}"):
             delete_zapis(record_id)
             st.success("Zapis obrisan.")
             st.rerun()
