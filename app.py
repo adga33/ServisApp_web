@@ -311,64 +311,11 @@ with tabs[5]:
 import sqlite3
 
 st.markdown("---")
-st.subheader("🧹 Administracija baze")
+st.subheader("🔍 Dijagnostika baze")
 
-if st.button("🔧 Očisti vrsta_unosa u bazi"):
+if st.button("Prikaži sve vrijednosti vrsta_unosa"):
     conn = sqlite3.connect("database.db")
     c = conn.cursor()
-
-    # 1) Prazno → Ostalo
-    c.execute("""
-        UPDATE zapisi
-        SET vrsta_unosa = 'Ostalo'
-        WHERE vrsta_unosa IS NULL
-           OR TRIM(vrsta_unosa) = ''
-    """)
-
-    # 2) Normalizacija svih tipova
-    c.execute("""
-        UPDATE zapisi
-        SET vrsta_unosa = 'Servis'
-        WHERE LOWER(TRIM(vrsta_unosa)) = 'servis'
-    """)
-
-    c.execute("""
-        UPDATE zapisi
-        SET vrsta_unosa = 'Tehnički pregled'
-        WHERE LOWER(TRIM(vrsta_unosa)) = 'tehnički pregled'
-    """)
-
-    c.execute("""
-        UPDATE zapisi
-        SET vrsta_unosa = 'Popravak'
-        WHERE LOWER(TRIM(vrsta_unosa)) = 'popravak'
-    """)
-
-    c.execute("""
-        UPDATE zapisi
-        SET vrsta_unosa = 'Havarija'
-        WHERE LOWER(TRIM(vrsta_unosa)) = 'havarija'
-    """)
-
-    c.execute("""
-        UPDATE zapisi
-        SET vrsta_unosa = 'Remont'
-        WHERE LOWER(TRIM(vrsta_unosa)) = 'remont'
-    """)
-
-    c.execute("""
-        UPDATE zapisi
-        SET vrsta_unosa = 'Izlaz'
-        WHERE LOWER(TRIM(vrsta_unosa)) = 'izlaz'
-    """)
-
-    c.execute("""
-        UPDATE zapisi
-        SET vrsta_unosa = 'Ostalo'
-        WHERE LOWER(TRIM(vrsta_unosa)) = 'ostalo'
-    """)
-
-    conn.commit()
+    rows = c.execute("SELECT id, vrsta_unosa FROM zapisi").fetchall()
     conn.close()
-
-    st.success("Baza očišćena! Restartaj aplikaciju i provjeri Uredi tab.")
+    st.write(rows)
