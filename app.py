@@ -56,7 +56,6 @@ if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
 # -----------------------------
 
 setup_logging()
-
 st.set_page_config(page_title="Servis plovila", layout="wide")
 
 # ---------------- MAIN ----------------
@@ -97,7 +96,27 @@ inicijalni = st.number_input("Inicijalni unos (ako postoji)", min_value=0, step=
 
 zadnji, sljedeci, do_servisa = calculate_service_info(df, inicijalni)
 
-st.info(f"🔧 Zadnji servis: {zadnji} h | Sljedeći servis: {sljedeci} h | Do servisa: {do_servisa} h")
+# -----------------------------
+#  VELIKI ISTAKNUTI BANNER
+# -----------------------------
+
+st.markdown(f"""
+<div style="
+    background-color:#fff3cd;
+    border-left: 10px solid #ff9800;
+    padding: 20px;
+    font-size: 24px;
+    font-weight: 700;
+    border-radius: 8px;
+    margin-top: 15px;
+    margin-bottom: 25px;
+    line-height: 1.6;
+">
+🔧 Zadnji servis: {zadnji} h<br>
+➡️ Sljedeći servis: {sljedeci} h<br>
+⏳ Preostalo: {do_servisa} h
+</div>
+""", unsafe_allow_html=True)
 
 # ---------------- TABOVI ----------------
 
@@ -116,7 +135,21 @@ with tabs[0]:
     st.subheader("➕ Dodaj novi zapis")
 
     datum = st.date_input("Datum")
-    sati = st.number_input("Radni sati", min_value=0, step=1)
+
+    # -----------------------------
+    #  POLJE ZA RADNE SATE BEZ 0
+    # -----------------------------
+    sati_input = st.text_input("Radni sati", placeholder="Unesi radne sate")
+
+    if sati_input.strip() == "":
+        sati = None
+    else:
+        try:
+            sati = int(sati_input)
+        except:
+            st.error("Unesi ispravan broj radnih sati.")
+            st.stop()
+
     vrsta = st.selectbox("Vrsta unosa", ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"])
     napomena = st.text_input("Napomena")
 
@@ -127,6 +160,10 @@ with tabs[0]:
     )
 
     if st.button("💾 Spremi zapis"):
+
+        if sati is None:
+            st.error("Unesi radne sate.")
+            st.stop()
 
         datum_str = datum.strftime("%d.%m.%Y")
 
