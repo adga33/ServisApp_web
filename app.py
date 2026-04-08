@@ -15,6 +15,7 @@ import os
 import pandas as pd
 from datetime import datetime
 from fpdf import FPDF
+import sqlite3
 
 from utils import (
     setup_logging,
@@ -92,9 +93,9 @@ if not df.empty:
     for col in numeric_cols:
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(int)
 
+    # KLJUČNO: index = ID
     df = df.sort_values("trenutni_radni_sati", ascending=False)
     df = df.set_index("id")
-
 
 # -----------------------------
 # SERVICE CALCULATION
@@ -125,7 +126,7 @@ st.markdown(f"""
 # TABS
 # -----------------------------
 
-tabs = st.tabs(["Novi zapis", "Pregled", "Uredi", "Dokumenti", "Tehnički pregled", "PDF"])
+tabs = st.tabs(["Novi zapis", "Pregled", "Uredi", "Dokumenti", "Tehnički pregled", "PDF", "Baza"])
 
 # ---------------- TAB 1: NOVI ZAPIS ----------------
 
@@ -191,7 +192,6 @@ with tabs[1]:
 
 with tabs[2]:
     st.subheader("✏️ Uredi zapis")
-    vrste = ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"]
 
     if df.empty:
         st.info("Nema zapisa.")
@@ -199,19 +199,17 @@ with tabs[2]:
         record_id = st.selectbox(
             "Odaberi zapis",
             df.index,
-            format_func=lambda rid: f"{df.loc[rid,'datum']} – {df.loc[rid,'vrsta_unosa']} – {df.loc[rid,'trenutni_radni_sati']} h"
+            format_func=lambda rid: f"{df.loc[rid,'datum']} – {df.loc[rid,'vrsta_unosa']} – {df.loc[rid,'trenutni_radni_sati']} h",
+            key="edit_odabir"
         )
 
-row = df.loc[record_id]
-
-
-        row = df.loc[idx]
-        record_id = int(row["id"])
+        row = df.loc[record_id]
 
         new_datum = st.date_input("Datum", datetime.strptime(row["datum"], "%d.%m.%Y"), key=f"edit_datum_{record_id}")
         new_sati = st.number_input("Radni sati", min_value=0, value=int(row["trenutni_radni_sati"]), key=f"edit_sati_{record_id}")
 
-        # NORMALIZACIJA VRSTE
+        vrste = ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"]
+
         raw = str(row["vrsta_unosa"]).strip().lower()
         mapa = {
             "servis": "Servis",
@@ -263,22 +261,22 @@ with tabs[3]:
     if df.empty:
         st.info("Nema zapisa.")
     else:
-        idx = st.number_input("Odaberi zapis", min_value=0, max_value=len(df)-1, step=1)
-        folder = df.loc[idx, "attachments"]
-        record_id = df.loc[idx, "id"]
+        rid = st.number_input("Odaberi zapis", min_value=int(df.index.min()), max_value=int(df.index.max()), step=1)
+        if rid in df.index:
+            folder = df.loc[rid, "attachments"]
 
-        if folder and os.path.exists(folder):
-            for f in os.listdir(folder):
-                path = os.path.join(folder, f)
-                st.download_button(f"Preuzmi {f}", open(path, "rb").read(), file_name=f)
+            if folder and os.path.exists(folder):
+                for f in os.listdir(folder):
+                    path = os.path.join(folder, f)
+                    st.download_button(f"Preuzmi {f}", open(path, "rb").read(), file_name=f)
 
-        new_files = st.file_uploader("Dodaj dokumente", type=["jpg","jpeg","png","pdf"], accept_multiple_files=True)
+            new_files = st.file_uploader("Dodaj dokumente", type=["jpg","jpeg","png","pdf"], accept_multiple_files=True)
 
-        if st.button("📥 Spremi nove dokumente"):
-            if new_files:
-                add_files_to_record(folder, new_files)
-                st.success("Dokumenti dodani.")
-                st.rerun()
+            if st.button("📥 Spremi nove dokumente"):
+                if new_files:
+                    add_files_to_record(folder, new_files)
+                    st.success("Dokumenti dodani.")
+                    st.rerun()
 
 # ---------------- TAB 5: TEHNIČKI ----------------
 
@@ -303,23 +301,36 @@ with tabs[5]:
         pdf.add_page()
         pdf.set_font("Arial", size=12)
 
-        for _, row in df.iterrows():
+        for rid, row in df.iterrows():
             pdf.cell(0, 10, txt=str(row), ln=True)
 
         pdf.output("report.pdf")
         st.download_button("Preuzmi PDF", open("report.pdf","rb"), file_name="report.pdf")
 
+# ---------------- TAB 7: BAZA ----------------
 
+with tabs[6]:
+    st.subheader("🧹 Administracija baze")
 
+    if st.button("Prikaži sve vrijednosti vrsta_unosa"):
+        conn = sqlite3.connect("database.db")
+        c = conn.cursor()
+        rows = c.execute("SELECT id, vrsta_unosa FROM zapisi").fetchall()
+        conn.close()
+        st.write(rows)
 
-import sqlite3
+    if st.button("⚠️ PRISILNO očisti prazne vrijednosti"):
+        conn = sqlite3.connect("database.db")
+        c = conn.cursor()
 
-st.markdown("---")
-st.subheader("🔍 Dijagnostika baze")
+        c.execute("""
+            UPDATE zapisi
+            SET vrsta_unosa = 'Ostalo'
+            WHERE vrsta_unosa IS NULL
+               OR vrsta_unosa = ''
+               OR TRIM(vrsta_unosa) = ''
+        """)
 
-if st.button("Prikaži sve vrijednosti vrsta_unosa"):
-    conn = sqlite3.connect("database.db")
-    c = conn.cursor()
-    rows = c.execute("SELECT id, vrsta_unosa FROM zapisi").fetchall()
-    conn.close()
-    st.write(rows)
+        conn.commit()
+        conn.close()
+        st.success("Prazne vrijednosti su sada 'Ostalo'. Restartaj aplikaciju.")
