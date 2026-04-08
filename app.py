@@ -186,7 +186,6 @@ with tabs[1]:
         st.dataframe(df, use_container_width=True)
 
 # ---------------- TAB 3: UREDI ----------------
-
 with tabs[2]:
     st.subheader("✏️ Uredi zapis")
 
@@ -205,7 +204,10 @@ with tabs[2]:
         new_datum = st.date_input("Datum", datetime.strptime(row["datum"], "%d.%m.%Y"))
         new_sati = st.number_input("Radni sati", min_value=0, value=int(row["trenutni_radni_sati"]))
 
-        # NORMALIZACIJA VRSTE
+        # --- VRSTE UNOSA (lokalno definirano, ne dijeli se s TAB 1) ---
+        vrste = ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"]
+
+        # --- NORMALIZACIJA ---
         raw = str(row["vrsta_unosa"]).strip().lower()
         mapa = {
             "servis": "Servis",
@@ -239,7 +241,7 @@ with tabs[2]:
         new_ocekivani = int(row["ocekivani_servis"])
         new_do_servisa = new_ocekivani - int(new_sati)
 
-        if st.button("💾 Spremi izmjene"):
+        if st.button("💾 Spremi izmjene", key=f"edit_spremi_{record_id}"):
             update_zapis(
                 record_id,
                 new_datum.strftime("%d.%m.%Y"),
@@ -253,10 +255,12 @@ with tabs[2]:
             st.success("Zapis izmijenjen.")
             st.rerun()
 
-        if st.button("🗑️ Obriši zapis"):
+        if st.button("🗑️ Obriši zapis", key=f"edit_obrisi_{record_id}"):
             delete_zapis(record_id)
             st.success("Zapis obrisan.")
             st.rerun()
+
+
 
 # ---------------- TAB 4: DOKUMENTI ----------------
 
