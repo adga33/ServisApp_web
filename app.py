@@ -189,6 +189,7 @@ with tabs[1]:
 
 with tabs[2]:
     st.subheader("✏️ Uredi zapis")
+    vrste = ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"]
 
     if df.empty:
         st.info("Nema zapisa.")
