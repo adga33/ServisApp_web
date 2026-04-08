@@ -92,7 +92,9 @@ if not df.empty:
     for col in numeric_cols:
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(int)
 
-    df = df.sort_values("trenutni_radni_sati", ascending=False).reset_index(drop=True)
+    df = df.sort_values("trenutni_radni_sati", ascending=False)
+    df = df.set_index("id")
+
 
 # -----------------------------
 # SERVICE CALCULATION
@@ -194,12 +196,14 @@ with tabs[2]:
     if df.empty:
         st.info("Nema zapisa.")
     else:
-        idx = st.selectbox(
+        record_id = st.selectbox(
             "Odaberi zapis",
             df.index,
-            format_func=lambda i: f"{df.loc[i,'datum']} – {df.loc[i,'vrsta_unosa']} – {df.loc[i,'trenutni_radni_sati']} h",
-            key="edit_odabir"
+            format_func=lambda rid: f"{df.loc[rid,'datum']} – {df.loc[rid,'vrsta_unosa']} – {df.loc[rid,'trenutni_radni_sati']} h"
         )
+
+row = df.loc[record_id]
+
 
         row = df.loc[idx]
         record_id = int(row["id"])
