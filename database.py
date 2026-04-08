@@ -29,10 +29,11 @@ def init_tables():
     conn.close()
 
 def migrate_database():
-    """Dodaje stupce koji nedostaju u starim bazama."""
+    """Dodaje stupce koji nedostaju i popravlja stare binarne vrijednosti."""
     conn = get_connection()
     c = conn.cursor()
 
+    # 1) Dodavanje stupaca ako nedostaju
     required_cols = {
         "datum": "TEXT",
         "trenutni_radni_sati": "INTEGER",
@@ -50,6 +51,36 @@ def migrate_database():
     for col, col_type in required_cols.items():
         if col not in existing_cols:
             c.execute(f"ALTER TABLE zapisi ADD COLUMN {col} {col_type}")
+
+    # 2) Popravak binarnih vrijednosti u starim zapisima
+    rows = c.execute("SELECT id, trenutni_radni_sati, servis_raden_na, ocekivani_servis, do_servisa FROM zapisi").fetchall()
+
+    def fix_value(v):
+        if isinstance(v, bytes):
+            try:
+                return int.from_bytes(v, byteorder="little")
+            except:
+                return 0
+        try:
+            return int(v)
+        except:
+            return 0
+
+    for row in rows:
+        record_id = row[0]
+        trenutni = fix_value(row[1])
+        servis = fix_value(row[2])
+        ocekivani = fix_value(row[3])
+        do_servisa = fix_value(row[4])
+
+        c.execute("""
+            UPDATE zapisi SET
+                trenutni_radni_sati=?,
+                servis_raden_na=?,
+                ocekivani_servis=?,
+                do_servisa=?
+            WHERE id=?
+        """, (trenutni, servis, ocekivani, do_servisa, record_id))
 
     conn.commit()
     conn.close()
