@@ -196,20 +196,36 @@ with tabs[2]:
     if df.empty:
         st.info("Nema zapisa.")
     else:
+        # LISTA ID-eva, ne indexa
+        ids = df.index.tolist()
+
+        # ODABIR PREMA ID-u
         record_id = st.selectbox(
             "Odaberi zapis",
-            df.index,
+            ids,
             format_func=lambda rid: f"{df.loc[rid,'datum']} – {df.loc[rid,'vrsta_unosa']} – {df.loc[rid,'trenutni_radni_sati']} h",
             key="edit_odabir"
         )
 
+        # UVIJEK PRAVI RED
         row = df.loc[record_id]
 
-        new_datum = st.date_input("Datum", datetime.strptime(row["datum"], "%d.%m.%Y"), key=f"edit_datum_{record_id}")
-        new_sati = st.number_input("Radni sati", min_value=0, value=int(row["trenutni_radni_sati"]), key=f"edit_sati_{record_id}")
+        new_datum = st.date_input(
+            "Datum",
+            datetime.strptime(row["datum"], "%d.%m.%Y"),
+            key=f"edit_datum_{record_id}"
+        )
+
+        new_sati = st.number_input(
+            "Radni sati",
+            min_value=0,
+            value=int(row["trenutni_radni_sati"]),
+            key=f"edit_sati_{record_id}"
+        )
 
         vrste = ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"]
 
+        # NORMALIZACIJA
         raw = str(row["vrsta_unosa"]).strip().lower()
         mapa = {
             "servis": "Servis",
@@ -222,9 +238,18 @@ with tabs[2]:
         }
         current_vrsta = mapa.get(raw, "Ostalo")
 
-        new_vrsta = st.selectbox("Vrsta unosa", vrste, index=vrste.index(current_vrsta), key=f"edit_vrsta_{record_id}")
+        new_vrsta = st.selectbox(
+            "Vrsta unosa",
+            vrste,
+            index=vrste.index(current_vrsta),
+            key=f"edit_vrsta_{record_id}"
+        )
 
-        new_napomena = st.text_input("Napomena", row["napomena"], key=f"edit_napomena_{record_id}")
+        new_napomena = st.text_input(
+            "Napomena",
+            row["napomena"],
+            key=f"edit_napomena_{record_id}"
+        )
 
         if new_vrsta == "Servis":
             new_servis_raden = new_sati
@@ -246,6 +271,11 @@ with tabs[2]:
                 new_napomena
             )
             st.success("Zapis izmijenjen.")
+            st.rerun()
+
+        if st.button("🗑️ Obriši zapis", key=f"edit_obrisi_{record_id}"):
+            delete_zapis(record_id)
+            st.success("Zapis obrisan.")
             st.rerun()
 
         if st.button("🗑️ Obriši zapis", key=f"edit_obrisi_{record_id}"):
