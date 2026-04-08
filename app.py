@@ -278,10 +278,7 @@ with tabs[2]:
             st.success("Zapis obrisan.")
             st.rerun()
 
-        if st.button("🗑️ Obriši zapis", key=f"edit_obrisi_{record_id}"):
-            delete_zapis(record_id)
-            st.success("Zapis obrisan.")
-            st.rerun()
+       
 
 # ---------------- TAB 4: DOKUMENTI ----------------
 
