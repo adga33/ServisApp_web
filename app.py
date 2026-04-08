@@ -215,7 +215,13 @@ with tabs[0]:
 
 with tabs[1]:
     st.subheader("📑 Pregled zapisa")
-    st.dataframe(df, use_container_width=True)
+
+    # Sigurna UTF‑8 konverzija svih stupaca
+    safe_df = df.copy()
+    for col in safe_df.columns:
+        safe_df[col] = safe_df[col].astype(str).str.encode("utf-8", "ignore").str.decode("utf-8", "ignore")
+
+    st.dataframe(safe_df, use_container_width=True)
 
 # ---------------- TAB 3: UREDI ----------------
 
