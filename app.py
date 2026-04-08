@@ -261,9 +261,20 @@ with tabs[2]:
         # --- VRSTA UNOSA (s normalizacijom) ---
         vrste = ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"]
 
-        current_vrsta = str(edit_row["vrsta_unosa"]).strip()
-        if current_vrsta not in vrste:
-            current_vrsta = "Ostalo"
+        raw_vrsta = str(edit_row["vrsta_unosa"]).strip().lower()
+
+mapa = {
+    "servis": "Servis",
+    "tehnički pregled": "Tehnički pregled",
+    "popravak": "Popravak",
+    "havarija": "Havarija",
+    "remont": "Remont",
+    "izlaz": "Izlaz",
+    "ostalo": "Ostalo"
+}
+
+current_vrsta = mapa.get(raw_vrsta, "Ostalo")
+
 
         new_vrsta = st.selectbox(
             "Vrsta unosa",
