@@ -53,7 +53,11 @@ def migrate_database():
             c.execute(f"ALTER TABLE zapisi ADD COLUMN {col} {col_type}")
 
     # 2) Popravak binarnih vrijednosti u starim zapisima
-    rows = c.execute("SELECT id, trenutni_radni_sati, servis_raden_na, ocekivani_servis, do_servisa FROM zapisi").fetchall()
+    rows = c.execute("""
+        SELECT id, trenutni_radni_sati, servis_raden_na, 
+               ocekivani_servis, do_servisa 
+        FROM zapisi
+    """).fetchall()
 
     def fix_value(v):
         if isinstance(v, bytes):
