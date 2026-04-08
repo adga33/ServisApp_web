@@ -304,31 +304,71 @@ with tabs[5]:
 
         pdf.output("report.pdf")
         st.download_button("Preuzmi PDF", open("report.pdf","rb"), file_name="report.pdf")
+
+
+
+
 import sqlite3
+
+st.markdown("---")
+st.subheader("🧹 Administracija baze")
 
 if st.button("🔧 Očisti vrsta_unosa u bazi"):
     conn = sqlite3.connect("database.db")
     c = conn.cursor()
 
-    c.execute("UPDATE zapisi SET vrsta_unosa='Servis' WHERE LOWER(TRIM(vrsta_unosa))='servis'")
-    c.execute("UPDATE zapisi SET vrsta_unosa='Tehnički pregled' WHERE LOWER(TRIM(vrsta_unosa))='tehnički pregled'")
-    c.execute("UPDATE zapisi SET vrsta_unosa='Popravak' WHERE LOWER(TRIM(vrsta_unosa))='popravak'")
-    c.execute("UPDATE zapisi SET vrsta_unosa='Havarija' WHERE LOWER(TRIM(vrsta_unosa))='havarija'")
-    c.execute("UPDATE zapisi SET vrsta_unosa='Remont' WHERE LOWER(TRIM(vrsta_unosa))='remont'")
-    c.execute("UPDATE zapisi SET vrsta_unosa='Izlaz' WHERE LOWER(TRIM(vrsta_unosa))='izlaz'")
-    c.execute("UPDATE zapisi SET vrsta_unosa='Ostalo' WHERE LOWER(TRIM(vrsta_unosa))='ostalo'")
+    # 1) Prazno → Ostalo
+    c.execute("""
+        UPDATE zapisi
+        SET vrsta_unosa = 'Ostalo'
+        WHERE vrsta_unosa IS NULL
+           OR TRIM(vrsta_unosa) = ''
+    """)
+
+    # 2) Normalizacija svih tipova
+    c.execute("""
+        UPDATE zapisi
+        SET vrsta_unosa = 'Servis'
+        WHERE LOWER(TRIM(vrsta_unosa)) = 'servis'
+    """)
 
     c.execute("""
         UPDATE zapisi
-        SET vrsta_unosa='Ostalo'
-        WHERE vrsta_unosa IS NULL
-           OR TRIM(vrsta_unosa)=''
-           OR LOWER(TRIM(vrsta_unosa)) NOT IN (
-               'servis','tehnički pregled','popravak','havarija','remont','izlaz','ostalo'
-           )
+        SET vrsta_unosa = 'Tehnički pregled'
+        WHERE LOWER(TRIM(vrsta_unosa)) = 'tehnički pregled'
+    """)
+
+    c.execute("""
+        UPDATE zapisi
+        SET vrsta_unosa = 'Popravak'
+        WHERE LOWER(TRIM(vrsta_unosa)) = 'popravak'
+    """)
+
+    c.execute("""
+        UPDATE zapisi
+        SET vrsta_unosa = 'Havarija'
+        WHERE LOWER(TRIM(vrsta_unosa)) = 'havarija'
+    """)
+
+    c.execute("""
+        UPDATE zapisi
+        SET vrsta_unosa = 'Remont'
+        WHERE LOWER(TRIM(vrsta_unosa)) = 'remont'
+    """)
+
+    c.execute("""
+        UPDATE zapisi
+        SET vrsta_unosa = 'Izlaz'
+        WHERE LOWER(TRIM(vrsta_unosa)) = 'izlaz'
+    """)
+
+    c.execute("""
+        UPDATE zapisi
+        SET vrsta_unosa = 'Ostalo'
+        WHERE LOWER(TRIM(vrsta_unosa)) = 'ostalo'
     """)
 
     conn.commit()
     conn.close()
 
-    st.success("Baza očišćena! Restartaj aplikaciju.")
+    st.success("Baza očišćena! Restartaj aplikaciju i provjeri Uredi tab.")
