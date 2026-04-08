@@ -228,6 +228,7 @@ with tabs[1]:
         st.dataframe(df, use_container_width=True)
 
 # ---------------- TAB 3: UREDI ----------------
+# ---------------- TAB 3: UREDI ----------------
 
 with tabs[2]:
     st.subheader("✏️ Uredi zapis")
@@ -262,7 +263,6 @@ with tabs[2]:
         vrste = ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"]
 
         raw_vrsta = str(edit_row["vrsta_unosa"]).strip().lower()
-
         mapa = {
             "servis": "Servis",
             "tehnički pregled": "Tehnički pregled",
@@ -272,9 +272,7 @@ with tabs[2]:
             "izlaz": "Izlaz",
             "ostalo": "Ostalo"
         }
-
         current_vrsta = mapa.get(raw_vrsta, "Ostalo")
-
 
         new_vrsta = st.selectbox(
             "Vrsta unosa",
@@ -296,7 +294,6 @@ with tabs[2]:
 
         new_ocekivani = edit_row["ocekivani_servis"]
 
-        # SIGURNO PRETVARANJE
         try:
             new_ocekivani = int(new_ocekivani)
         except:
