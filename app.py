@@ -148,7 +148,12 @@ with tabs[0]:
             st.error("Unesi ispravan broj radnih sati.")
             st.stop()
 
-    vrsta = st.selectbox("Vrsta unosa", ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"])
+    vrsta = st.selectbox(
+    "Vrsta unosa",
+    ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"],
+    key="novi_vrsta_unosa"
+)
+
     napomena = st.text_input("Napomena")
 
     uploaded_files = st.file_uploader(
