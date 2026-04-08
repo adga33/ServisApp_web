@@ -258,12 +258,22 @@ with tabs[2]:
             key=f"edit_sati_{record_id}"
         )
 
-        new_vrsta = st.selectbox(
-            "Vrsta unosa",
-            ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"],
-            index=["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"].index(edit_row["vrsta_unosa"]),
-            key=f"edit_vrsta_{record_id}"
-        )
+        vrste = ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"]
+
+# Normalizacija vrijednosti iz baze
+current_vrsta = str(edit_row["vrsta_unosa"]).strip()
+
+# Ako vrijednost nije u listi, default je "Ostalo"
+if current_vrsta not in vrste:
+    current_vrsta = "Ostalo"
+
+new_vrsta = st.selectbox(
+    "Vrsta unosa",
+    vrste,
+    index=vrste.index(current_vrsta),
+    key=f"edit_vrsta_{record_id}"
+)
+
 
         new_napomena = st.text_input(
             "Napomena",
