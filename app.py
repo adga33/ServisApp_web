@@ -24,7 +24,7 @@ from utils import (
 )
 
 # -----------------------------
-#  INIT
+# INIT
 # -----------------------------
 
 init_tables()
@@ -33,7 +33,7 @@ setup_logging()
 st.set_page_config(page_title="Servis plovila", layout="wide")
 
 # -----------------------------
-#  LOGIN
+# LOGIN
 # -----------------------------
 
 PASSWORD_HASH = hashlib.sha256("servis123".encode()).hexdigest()
@@ -56,7 +56,7 @@ if not st.session_state["logged_in"]:
     st.stop()
 
 # -----------------------------
-#  MAIN UI
+# MAIN UI
 # -----------------------------
 
 st.title("⛵ Evidencija servisa plovila")
@@ -69,7 +69,7 @@ if not boats:
 plovilo = st.selectbox("Odaberi plovilo", boats)
 
 # -----------------------------
-#  LOAD DATA
+# LOAD DATA
 # -----------------------------
 
 rows = get_zapisi(plovilo)
@@ -95,7 +95,7 @@ if not df.empty:
     df = df.sort_values("trenutni_radni_sati", ascending=False).reset_index(drop=True)
 
 # -----------------------------
-#  SERVICE CALCULATION
+# SERVICE CALCULATION
 # -----------------------------
 
 inicijalni = st.number_input("Inicijalni unos (ako postoji)", min_value=0, step=1)
@@ -120,7 +120,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # -----------------------------
-#  TABS
+# TABS
 # -----------------------------
 
 tabs = st.tabs(["Novi zapis", "Pregled", "Uredi", "Dokumenti", "Tehnički pregled", "PDF"])
@@ -145,7 +145,7 @@ with tabs[0]:
     vrste = ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"]
     vrsta = st.selectbox("Vrsta unosa", vrste, key="novi_vrsta")
 
-    napomena = st.text_input("Napomena")
+    napomena = st.text_input("Napomena", key="novi_napomena")
 
     files = st.file_uploader("📎 Priloži dokumente", type=["jpg","jpeg","png","pdf"], accept_multiple_files=True)
 
@@ -186,6 +186,7 @@ with tabs[1]:
         st.dataframe(df, use_container_width=True)
 
 # ---------------- TAB 3: UREDI ----------------
+
 with tabs[2]:
     st.subheader("✏️ Uredi zapis")
 
@@ -195,19 +196,17 @@ with tabs[2]:
         idx = st.selectbox(
             "Odaberi zapis",
             df.index,
-            format_func=lambda i: f"{df.loc[i,'datum']} – {df.loc[i,'vrsta_unosa']} – {df.loc[i,'trenutni_radni_sati']} h"
+            format_func=lambda i: f"{df.loc[i,'datum']} – {df.loc[i,'vrsta_unosa']} – {df.loc[i,'trenutni_radni_sati']} h",
+            key="edit_odabir"
         )
 
         row = df.loc[idx]
         record_id = int(row["id"])
 
-        new_datum = st.date_input("Datum", datetime.strptime(row["datum"], "%d.%m.%Y"))
-        new_sati = st.number_input("Radni sati", min_value=0, value=int(row["trenutni_radni_sati"]))
+        new_datum = st.date_input("Datum", datetime.strptime(row["datum"], "%d.%m.%Y"), key=f"edit_datum_{record_id}")
+        new_sati = st.number_input("Radni sati", min_value=0, value=int(row["trenutni_radni_sati"]), key=f"edit_sati_{record_id}")
 
-        # --- VRSTE UNOSA (lokalno definirano, ne dijeli se s TAB 1) ---
-        vrste = ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"]
-
-        # --- NORMALIZACIJA ---
+        # NORMALIZACIJA VRSTE
         raw = str(row["vrsta_unosa"]).strip().lower()
         mapa = {
             "servis": "Servis",
@@ -220,18 +219,9 @@ with tabs[2]:
         }
         current_vrsta = mapa.get(raw, "Ostalo")
 
-        new_vrsta = st.selectbox(
-            "Vrsta unosa",
-            vrste,
-            index=vrste.index(current_vrsta),
-            key=f"edit_vrsta_{record_id}"
-        )
+        new_vrsta = st.selectbox("Vrsta unosa", vrste, index=vrste.index(current_vrsta), key=f"edit_vrsta_{record_id}")
 
-        new_napomena = st.text_input(
-            "Napomena",
-            row["napomena"],
-            key=f"edit_napomena_{record_id}"
-        )
+        new_napomena = st.text_input("Napomena", row["napomena"], key=f"edit_napomena_{record_id}")
 
         if new_vrsta == "Servis":
             new_servis_raden = new_sati
@@ -259,8 +249,6 @@ with tabs[2]:
             delete_zapis(record_id)
             st.success("Zapis obrisan.")
             st.rerun()
-
-
 
 # ---------------- TAB 4: DOKUMENTI ----------------
 
