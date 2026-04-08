@@ -85,8 +85,14 @@ for col in required_cols:
 
 if not df.empty:
     df["id"] = df["id"].astype(int)
-    df = df.sort_values("id", ascending=False).reset_index(drop=True)
     df["napomena"] = df["napomena"].astype(str)
+
+    # SIGURNO PRETVARANJE BROJEVA
+    for col in ["trenutni_radni_sati", "servis_raden_na", "ocekivani_servis", "do_servisa"]:
+        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(int)
+
+    # SORTIRANJE PO RADNIM SATIMA
+    df = df.sort_values("trenutni_radni_sati", ascending=False).reset_index(drop=True)
 
 # -----------------------------
 #  SERVISNI IZRAČUNI
@@ -149,10 +155,10 @@ with tabs[0]:
             st.stop()
 
     vrsta = st.selectbox(
-    "Vrsta unosa",
-    ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"],
-    key="novi_vrsta_unosa"
-)
+        "Vrsta unosa",
+        ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"],
+        key="novi_vrsta_unosa"
+    )
 
     napomena = st.text_input("Napomena")
 
@@ -216,12 +222,10 @@ with tabs[0]:
 with tabs[1]:
     st.subheader("📑 Pregled zapisa")
 
-    # Sigurna UTF‑8 konverzija svih stupaca
-    safe_df = df.copy()
-    for col in safe_df.columns:
-        safe_df[col] = safe_df[col].apply(lambda x: str(x).encode("utf-8", "ignore").decode("utf-8", "ignore"))
-
-    st.dataframe(safe_df, use_container_width=True)
+    if df.empty:
+        st.info("Nema zapisa.")
+    else:
+        st.dataframe(df, use_container_width=True)
 
 # ---------------- TAB 3: UREDI ----------------
 
@@ -273,6 +277,18 @@ with tabs[2]:
             new_servis_raden = edit_row["servis_raden_na"]
 
         new_ocekivani = edit_row["ocekivani_servis"]
+
+        # SIGURNO PRETVARANJE
+        try:
+            new_ocekivani = int(new_ocekivani)
+        except:
+            new_ocekivani = 0
+
+        try:
+            new_sati = int(new_sati)
+        except:
+            new_sati = 0
+
         new_do_servisa = new_ocekivani - new_sati
 
         if st.button("💾 Spremi izmjene", key=f"edit_spremi_{record_id}"):
