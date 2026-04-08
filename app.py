@@ -219,7 +219,7 @@ with tabs[1]:
     # Sigurna UTF‑8 konverzija svih stupaca
     safe_df = df.copy()
     for col in safe_df.columns:
-        safe_df[col] = safe_df[col].astype(str).str.encode("utf-8", "ignore").str.decode("utf-8", "ignore")
+        safe_df[col] = safe_df[col].apply(lambda x: str(x).encode("utf-8", "ignore").decode("utf-8", "ignore"))
 
     st.dataframe(safe_df, use_container_width=True)
 
