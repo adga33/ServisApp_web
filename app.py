@@ -218,9 +218,18 @@ with tabs[2]:
         }
         current_vrsta = mapa.get(raw, "Ostalo")
 
-        new_vrsta = st.selectbox("Vrsta unosa", vrste, index=vrste.index(current_vrsta))
+        new_vrsta = st.selectbox(
+            "Vrsta unosa",
+            vrste,
+            index=vrste.index(current_vrsta),
+            key=f"edit_vrsta_{record_id}"
+        )
 
-        new_napomena = st.text_input("Napomena", row["napomena"])
+        new_napomena = st.text_input(
+            "Napomena",
+            row["napomena"],
+            key=f"edit_napomena_{record_id}"
+        )
 
         if new_vrsta == "Servis":
             new_servis_raden = new_sati
