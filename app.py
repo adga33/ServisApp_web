@@ -263,17 +263,17 @@ with tabs[2]:
 
         raw_vrsta = str(edit_row["vrsta_unosa"]).strip().lower()
 
-mapa = {
-    "servis": "Servis",
-    "tehnički pregled": "Tehnički pregled",
-    "popravak": "Popravak",
-    "havarija": "Havarija",
-    "remont": "Remont",
-    "izlaz": "Izlaz",
-    "ostalo": "Ostalo"
-}
+        mapa = {
+            "servis": "Servis",
+            "tehnički pregled": "Tehnički pregled",
+            "popravak": "Popravak",
+            "havarija": "Havarija",
+            "remont": "Remont",
+            "izlaz": "Izlaz",
+            "ostalo": "Ostalo"
+        }
 
-current_vrsta = mapa.get(raw_vrsta, "Ostalo")
+        current_vrsta = mapa.get(raw_vrsta, "Ostalo")
 
 
         new_vrsta = st.selectbox(
