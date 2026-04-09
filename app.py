@@ -291,15 +291,19 @@ with tabs[3]:
     st.subheader("📎 Dokumenti")
 
     if df.empty:
-        st.info("Nema zapisa.")
+        st.info("Nema zapisa za ovo plovilo.")
     else:
+        min_id = int(df.index.min())
+        max_id = int(df.index.max())
+
         rid = st.number_input(
             "Odaberi zapis",
-            min_value=int(df.index.min()),
-            max_value=int(df.index.max()),
+            min_value=min_id,
+            max_value=max_id,
             step=1,
             key="dokumenti_rid"
         )
+
 
         if rid in df.index:
             folder = df.loc[rid, "attachments"]
