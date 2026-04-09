@@ -189,27 +189,24 @@ with tabs[1]:
         st.dataframe(df, use_container_width=True)
 
 # ---------------- TAB 3: UREDI ----------------
-
 with tabs[2]:
     st.subheader("✏️ Uredi zapis")
 
     if df.empty:
         st.info("Nema zapisa.")
     else:
-        # LISTA ID-eva, ne indexa
+        # LISTA ID-eva
         ids = df.index.tolist()
 
         # ODABIR PREMA ID-u
         record_id = st.selectbox(
-        "Odaberi zapis",
-        df.index.tolist(),
-        format_func=lambda rid: f"{df.loc[rid,'datum']} – {df.loc[rid,'vrsta_unosa']} – {df.loc[rid,'trenutni_radni_sati']} h"
+            "Odaberi zapis",
+            ids,
+            format_func=lambda rid: f"{df.loc[rid,'datum']} – {df.loc[rid,'vrsta_unosa']} – {df.loc[rid,'trenutni_radni_sati']} h",
+            key="edit_odabir"
         )
 
-        row = df.loc[record_id]
-
-
-        # UVIJEK PRAVI RED
+        # PRAVI RED
         row = df.loc[record_id]
 
         new_datum = st.date_input(
@@ -261,7 +258,7 @@ with tabs[2]:
         new_ocekivani = int(row["ocekivani_servis"])
         new_do_servisa = new_ocekivani - int(new_sati)
 
-        if st.button("💾 Spremi izmjene", key=f"edit_spremi"):
+        if st.button("💾 Spremi izmjene", key="edit_spremi"):
             update_zapis(
                 record_id,
                 new_datum.strftime("%d.%m.%Y"),
@@ -275,11 +272,10 @@ with tabs[2]:
             st.success("Zapis izmijenjen.")
             st.rerun()
 
-        if st.button("🗑️ Obriši zapis", key=f"edit_obrisi"):
+        if st.button("🗑️ Obriši zapis", key="edit_obrisi"):
             delete_zapis(record_id)
             st.success("Zapis obrisan.")
             st.rerun()
-
        
 
 # ---------------- TAB 4: DOKUMENTI ----------------
