@@ -210,36 +210,34 @@ with tabs[2]:
         # PRAVI RED
         row = df.loc[record_id]
 
-        # Pretvori datum u datetime.date bez obzira na format
-datum_raw = row["datum"]
+        # SIGURNO PARSANJE DATUMA
+        datum_raw = row["datum"]
+        if isinstance(datum_raw, str) and datum_raw.strip() != "":
+            try:
+                datum_obj = datetime.strptime(datum_raw, "%d.%m.%Y").date()
+            except:
+                datum_obj = datetime.today().date()
+        elif isinstance(datum_raw, datetime):
+            datum_obj = datum_raw.date()
+        else:
+            datum_obj = datetime.today().date()
 
-if isinstance(datum_raw, str) and datum_raw.strip() != "":
-    try:
-        datum_obj = datetime.strptime(datum_raw, "%d.%m.%Y").date()
-    except:
-        # fallback ako je format drugačiji
-        datum_obj = datetime.today().date()
-elif isinstance(datum_raw, datetime):
-    datum_obj = datum_raw.date()
-else:
-    datum_obj = datetime.today().date()
+        new_datum = st.date_input(
+            "Datum",
+            datum_obj,
+            key=f"edit_datum_{record_id}"
+        )
 
-new_datum = st.date_input(
-    "Datum",
-    datum_obj,
-    key=f"edit_datum_{record_id}"
-)
-
-new_sati = st.number_input(
+        new_sati = st.number_input(
             "Radni sati",
             min_value=0,
             value=int(row["trenutni_radni_sati"]),
             key=f"edit_sati_{record_id}"
         )
 
-vrste = ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"]
+        vrste = ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"]
 
-        # NORMALIZACIJA
+        # NORMALIZACIJA VRSTE
         raw = str(row["vrsta_unosa"]).strip().lower()
         mapa = {
             "servis": "Servis",
@@ -265,6 +263,7 @@ vrste = ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz
             key=f"edit_napomena_{record_id}"
         )
 
+        # SERVIS RAĐEN
         if new_vrsta == "Servis":
             new_servis_raden = new_sati
         else:
@@ -291,7 +290,6 @@ vrste = ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz
             delete_zapis(record_id)
             st.success("Zapis obrisan.")
             st.rerun()
-       
 
 # ---------------- TAB 4: DOKUMENTI ----------------
 
