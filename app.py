@@ -223,7 +223,13 @@ with tabs[2]:
 
         # Vrsta
         vrste = ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"]
-        new_vrsta = st.selectbox("Vrsta unosa", vrste, index=vrste.index(row["vrsta_unosa"]))
+        new_vrsta = st.selectbox(
+        "Vrsta unosa",
+        vrste,
+        index=vrste.index(row["vrsta_unosa"]) if row["vrsta_unosa"] in vrste else 0,
+        key=f"vrsta_{record_id}"
+        )
+
 
         # Napomena
         new_napomena = st.text_input("Napomena", row["napomena"])
