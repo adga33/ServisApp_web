@@ -102,18 +102,27 @@ def add_zapis(*args):
     conn.close()
 
 def get_zapisi(plovilo):
-    conn = get_connection()
+    conn = sqlite3.connect("database.db")
     c = conn.cursor()
-    c.execute("SELECT * FROM zapisi WHERE plovilo=? ORDER BY id DESC", (plovilo,))
+    c.execute("""
+        SELECT 
+            id,
+            plovilo,
+            datum,
+            trenutni_radni_sati,
+            servis_raden_na,
+            ocekivani_servis,
+            do_servisa,
+            vrsta_unosa,
+            napomena,
+            attachments
+        FROM zapisi
+        WHERE plovilo = ?
+        ORDER BY id DESC
+    """, (plovilo,))
     rows = c.fetchall()
     conn.close()
-
-    cols = [
-        "id", "plovilo", "datum", "trenutni_radni_sati", "servis_raden_na",
-        "ocekivani_servis", "do_servisa", "vrsta_unosa", "napomena", "attachments"
-    ]
-
-    return [dict(zip(cols, row)) for row in rows]
+    return rows
 
 def update_zapis(record_id, *args):
     conn = get_connection()
