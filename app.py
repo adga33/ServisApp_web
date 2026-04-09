@@ -290,41 +290,48 @@ with tabs[2]:
 with tabs[3]:
     st.subheader("📎 Dokumenti")
 
+    # Ako nema zapisa, odmah prekini
     if df.empty:
         st.info("Nema zapisa za ovo plovilo.")
-    else:
+        st.stop()
+
+    # Sigurno dohvaćanje min/max ID-a
+    try:
         min_id = int(df.index.min())
         max_id = int(df.index.max())
+    except:
+        st.error("Greška: ID zapisa nije valjan.")
+        st.stop()
 
-        rid = st.number_input(
-            "Odaberi zapis",
-            min_value=min_id,
-            max_value=max_id,
-            step=1,
-            key="dokumenti_rid"
+    rid = st.number_input(
+        "Odaberi zapis",
+        min_value=min_id,
+        max_value=max_id,
+        step=1,
+        key="dokumenti_rid"
+    )
+
+    if rid in df.index:
+        folder = df.loc[rid, "attachments"]
+
+        if folder and os.path.exists(folder):
+            for f in os.listdir(folder):
+                path = os.path.join(folder, f)
+                st.download_button(f"Preuzmi {f}", open(path, "rb").read(), file_name=f)
+
+        new_files = st.file_uploader(
+            "Dodaj dokumente",
+            type=["jpg", "jpeg", "png", "pdf"],
+            accept_multiple_files=True,
+            key=f"dokumenti_upload_{rid}"
         )
 
+        if st.button("📥 Spremi nove dokumente", key=f"dokumenti_spremi_{rid}"):
+            if new_files:
+                add_files_to_record(folder, new_files)
+                st.success("Dokumenti dodani.")
+                st.rerun()
 
-        if rid in df.index:
-            folder = df.loc[rid, "attachments"]
-
-            if folder and os.path.exists(folder):
-                for f in os.listdir(folder):
-                    path = os.path.join(folder, f)
-                    st.download_button(f"Preuzmi {f}", open(path, "rb").read(), file_name=f)
-
-            new_files = st.file_uploader(
-                "Dodaj dokumente",
-                type=["jpg", "jpeg", "png", "pdf"],
-                accept_multiple_files=True,
-                key=f"dokumenti_upload_{rid}"
-            )
-
-            if st.button("📥 Spremi nove dokumente", key=f"dokumenti_spremi_{rid}"):
-                if new_files:
-                    add_files_to_record(folder, new_files)
-                    st.success("Dokumenti dodani.")
-                    st.rerun()
 
 # -------------------------------------------------
 # TAB 5: TEHNIČKI PREGLED
