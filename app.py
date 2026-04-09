@@ -347,7 +347,6 @@ with tabs[6]:
     if st.button("⚠️ PRISILNO očisti prazne vrijednosti"):
         conn = sqlite3.connect("database.db")
         c = conn.cursor()
-
         c.execute("""
             UPDATE zapisi
             SET vrsta_unosa = 'Ostalo'
@@ -355,7 +354,24 @@ with tabs[6]:
                OR vrsta_unosa = ''
                OR TRIM(vrsta_unosa) = ''
         """)
-
         conn.commit()
         conn.close()
         st.success("Prazne vrijednosti su sada 'Ostalo'. Restartaj aplikaciju.")
+
+    st.markdown("---")
+    st.subheader("🛠 SQL konzola (napredno)")
+
+    sql_query = st.text_area("SQL upit", height=150, placeholder="PRAGMA table_info(zapisi);")
+
+    if st.button("Pokreni SQL"):
+        try:
+            conn = sqlite3.connect("database.db")
+            c = conn.cursor()
+            c.execute(sql_query)
+            result = c.fetchall()
+            conn.commit()
+            conn.close()
+            st.success("SQL izvršen.")
+            st.write(result)
+        except Exception as e:
+            st.error(f"Greška: {e}")
