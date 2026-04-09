@@ -61,6 +61,21 @@ if not st.session_state["logged_in"]:
 # -----------------------------
 
 st.title("⛵ Evidencija servisa plovila")
+# -----------------------------
+# SIDEBAR – DODAVANJE NOVOG PLOVILA
+# -----------------------------
+
+st.sidebar.subheader("➕ Dodaj novo plovilo")
+
+novo_plovilo = st.sidebar.text_input("Naziv novog plovila")
+
+if st.sidebar.button("Dodaj plovilo"):
+    if not novo_plovilo.strip():
+        st.sidebar.error("Unesi ispravan naziv.")
+    else:
+        create_new_boat(novo_plovilo.strip())
+        st.sidebar.success(f"Plovilo '{novo_plovilo}' je dodano.")
+        st.rerun()
 
 boats = get_boats()
 if not boats:
