@@ -56,12 +56,6 @@ if not st.session_state["logged_in"]:
     st.stop()
 
 # -------------------------------------------------
-# MAIN UI
-# -------------------------------------------------
-
-st.title("⛵ Evidencija servisa plovila")
-
-# -------------------------------------------------
 # SIDEBAR – DODAVANJE PLOVILA
 # -------------------------------------------------
 
@@ -116,6 +110,37 @@ if not df.empty:
     df = df.set_index("id")
 
 # -------------------------------------------------
+# PRIKAZ SERVIS INFORMACIJA
+# -------------------------------------------------
+
+if not df.empty:
+    zadnji = int(df["servis_raden_na"].max())
+    sljedeci = int(df["ocekivani_servis"].max())
+    do_servisa = int(df["do_servisa"].min())
+else:
+    zadnji = 0
+    sljedeci = 0
+    do_servisa = 0
+
+st.markdown(f"""
+<div style="
+    background-color:#fff3cd;
+    border-left: 10px solid #ff9800;
+    padding: 20px;
+    font-size: 24px;
+    font-weight: 700;
+    border-radius: 8px;
+    margin-top: 15px;
+    margin-bottom: 25px;
+    line-height: 1.6;
+">
+🔧 Zadnji servis: {zadnji} h<br>
+➡️ Sljedeći servis: {sljedeci} h<br>
+⏳ Preostalo: {do_servisa} h
+</div>
+""", unsafe_allow_html=True)
+
+# -------------------------------------------------
 # TABS
 # -------------------------------------------------
 
@@ -141,7 +166,7 @@ with tabs[0]:
             st.stop()
 
     vrste = ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"]
-    vrsta = st.selectbox("Vrsta unosa", vrste)
+    vrsta = st.selectbox("Vrsta unosa", vrste, key="novi_vrsta")
 
     napomena = st.text_input("Napomena")
 
@@ -154,7 +179,6 @@ with tabs[0]:
 
         datum_str = datum.strftime("%d.%m.%Y")
 
-        # SERVIS LOGIKA U BAZI
         if vrsta == "Servis":
             servis_raden = sati
         else:
@@ -199,44 +223,39 @@ with tabs[2]:
         ids = df.index.tolist()
 
         record_id = st.selectbox(
-    "Odaberi zapis",
-    ids,
-    format_func=lambda rid: f"{df.loc[rid,'datum']} – {df.loc[rid,'vrsta_unosa']} – {df.loc[rid,'trenutni_radni_sati']} h",
-    key="uredi_record_id"
-)
-
+            "Odaberi zapis",
+            ids,
+            format_func=lambda rid: f"{df.loc[rid,'datum']} – {df.loc[rid,'vrsta_unosa']} – {df.loc[rid,'trenutni_radni_sati']} h",
+            key="uredi_record_id"
+        )
 
         row = df.loc[record_id]
 
-        # Datum
         try:
             datum_obj = datetime.strptime(row["datum"], "%d.%m.%Y").date()
         except:
             datum_obj = datetime.today().date()
 
-        new_datum = st.date_input("Datum", datum_obj)
+        new_datum = st.date_input("Datum", datum_obj, key=f"datum_edit_{record_id}")
 
-        # Radni sati
         new_sati = st.number_input(
             "Radni sati",
             min_value=0,
-            value=int(row["trenutni_radni_sati"])
+            value=int(row["trenutni_radni_sati"]),
+            key=f"sati_edit_{record_id}"
         )
 
-        # Vrsta
         vrste = ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"]
+
         new_vrsta = st.selectbox(
-        "Vrsta unosa",
-        vrste,
-        index=vrste.index(row["vrsta_unosa"]) if row["vrsta_unosa"] in vrste else 0,
-        key=f"vrsta_{record_id}"
+            "Vrsta unosa",
+            vrste,
+            index=vrste.index(row["vrsta_unosa"]) if row["vrsta_unosa"] in vrste else 0,
+            key=f"vrsta_edit_{record_id}"
         )
 
+        new_napomena = st.text_input("Napomena", row["napomena"], key=f"napomena_edit_{record_id}")
 
-        # Napomena
-        new_napomena = st.text_input("Napomena", row["napomena"])
-
-        # SERVIS LOGIKA
         if new_vrsta == "Servis":
             new_servis_raden = new_sati
         else:
@@ -245,7 +264,7 @@ with tabs[2]:
         new_ocekivani = new_servis_raden + 100
         new_do_servisa = new_ocekivani - new_sati
 
-        if st.button("💾 Spremi izmjene"):
+        if st.button("💾 Spremi izmjene", key=f"spremi_edit_{record_id}"):
             update_zapis(
                 record_id,
                 new_datum.strftime("%d.%m.%Y"),
@@ -259,7 +278,7 @@ with tabs[2]:
             st.success("Zapis izmijenjen.")
             st.rerun()
 
-        if st.button("🗑️ Obriši zapis"):
+        if st.button("🗑️ Obriši zapis", key=f"obrisi_edit_{record_id}"):
             delete_zapis(record_id)
             st.success("Zapis obrisan.")
             st.rerun()
@@ -275,12 +294,12 @@ with tabs[3]:
         st.info("Nema zapisa.")
     else:
         rid = st.number_input(
-    "Odaberi zapis",
-    min_value=int(df.index.min()),
-    max_value=int(df.index.max()),
-    step=1,
-    key="dokumenti_rid"
-)
+            "Odaberi zapis",
+            min_value=int(df.index.min()),
+            max_value=int(df.index.max()),
+            step=1,
+            key="dokumenti_rid"
+        )
 
         if rid in df.index:
             folder = df.loc[rid, "attachments"]
@@ -290,9 +309,14 @@ with tabs[3]:
                     path = os.path.join(folder, f)
                     st.download_button(f"Preuzmi {f}", open(path, "rb").read(), file_name=f)
 
-            new_files = st.file_uploader("Dodaj dokumente", type=["jpg", "jpeg", "png", "pdf"], accept_multiple_files=True)
+            new_files = st.file_uploader(
+                "Dodaj dokumente",
+                type=["jpg", "jpeg", "png", "pdf"],
+                accept_multiple_files=True,
+                key=f"dokumenti_upload_{rid}"
+            )
 
-            if st.button("📥 Spremi nove dokumente"):
+            if st.button("📥 Spremi nove dokumente", key=f"dokumenti_spremi_{rid}"):
                 if new_files:
                     add_files_to_record(folder, new_files)
                     st.success("Dokumenti dodani.")
@@ -320,7 +344,7 @@ with tabs[4]:
 with tabs[5]:
     st.subheader("📄 PDF izvještaj")
 
-    if st.button("Generiraj PDF"):
+    if st.button("Generiraj PDF", key="pdf_generate"):
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Arial", size=12)
@@ -338,14 +362,14 @@ with tabs[5]:
 with tabs[6]:
     st.subheader("🧹 Administracija baze")
 
-    if st.button("Prikaži sve vrijednosti vrsta_unosa"):
+    if st.button("Prikaži sve vrijednosti vrsta_unosa", key="baza_prikaz"):
         conn = sqlite3.connect("database.db")
         c = conn.cursor()
         rows = c.execute("SELECT id, vrsta_unosa FROM zapisi").fetchall()
         conn.close()
         st.write(rows)
 
-    if st.button("⚠️ PRISILNO očisti prazne vrijednosti"):
+    if st.button("⚠️ PRISILNO očisti prazne vrijednosti", key="baza_ocisti"):
         conn = sqlite3.connect("database.db")
         c = conn.cursor()
         c.execute("""
@@ -362,9 +386,9 @@ with tabs[6]:
     st.markdown("---")
     st.subheader("🛠 SQL konzola (napredno)")
 
-    sql_query = st.text_area("SQL upit", height=150, placeholder="PRAGMA table_info(zapisi);")
+    sql_query = st.text_area("SQL upit", height=150, placeholder="PRAGMA table_info(zapisi);", key="sql_konzola")
 
-    if st.button("Pokreni SQL"):
+    if st.button("Pokreni SQL", key="sql_run"):
         try:
             conn = sqlite3.connect("database.db")
             c = conn.cursor()
