@@ -237,7 +237,7 @@ new_sati = st.number_input(
             key=f"edit_sati_{record_id}"
         )
 
-        vrste = ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"]
+vrste = ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"]
 
         # NORMALIZACIJA
         raw = str(row["vrsta_unosa"]).strip().lower()
