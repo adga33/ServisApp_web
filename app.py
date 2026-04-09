@@ -231,9 +231,11 @@ with tabs[2]:
         new_sati = st.number_input(
             "Radni sati",
             min_value=0,
-            value=int(row["trenutni_radni_sati"]),
+            value=int(pd.to_numeric(row["trenutni_radni_sati"], errors="coerce") or 0),
             key=f"edit_sati_{record_id}"
         )
+	st.write("DEBUG SATI:", df["trenutni_radni_sati"])
+
 
         vrste = ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"]
 
