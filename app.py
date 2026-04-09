@@ -210,11 +210,26 @@ with tabs[2]:
         # PRAVI RED
         row = df.loc[record_id]
 
-        new_datum = st.date_input(
-            "Datum",
-            datetime.strptime(row["datum"], "%d.%m.%Y"),
-            key=f"edit_datum_{record_id}"
-        )
+        # Pretvori datum u datetime.date bez obzira na format
+datum_raw = row["datum"]
+
+if isinstance(datum_raw, str) and datum_raw.strip() != "":
+    try:
+        datum_obj = datetime.strptime(datum_raw, "%d.%m.%Y").date()
+    except:
+        # fallback ako je format drugačiji
+        datum_obj = datetime.today().date()
+elif isinstance(datum_raw, datetime):
+    datum_obj = datum_raw.date()
+else:
+    datum_obj = datetime.today().date()
+
+new_datum = st.date_input(
+    "Datum",
+    datum_obj,
+    key=f"edit_datum_{record_id}"
+)
+
 
         new_sati = st.number_input(
             "Radni sati",
