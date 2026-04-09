@@ -86,7 +86,8 @@ for col in required_cols:
         df[col] = None
 
 if not df.empty:
-    df["id"] = df["id"].astype(int)
+    df["id"] = pd.to_numeric(df["id"], errors="coerce")
+
     df["napomena"] = df["napomena"].astype(str)
 
     numeric_cols = ["trenutni_radni_sati", "servis_raden_na", "ocekivani_servis", "do_servisa"]
