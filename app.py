@@ -201,12 +201,12 @@ with tabs[2]:
 
         # ODABIR PREMA ID-u
         record_id = st.selectbox(
-    "Odaberi zapis",
-    df.index.tolist(),
-    format_func=lambda rid: f"{df.loc[rid,'datum']} – {df.loc[rid,'vrsta_unosa']} – {df.loc[rid,'trenutni_radni_sati']} h"
-    )
+        "Odaberi zapis",
+        df.index.tolist(),
+        format_func=lambda rid: f"{df.loc[rid,'datum']} – {df.loc[rid,'vrsta_unosa']} – {df.loc[rid,'trenutni_radni_sati']} h"
+        )
 
-    row = df.loc[record_id]
+        row = df.loc[record_id]
 
 
         # UVIJEK PRAVI RED
