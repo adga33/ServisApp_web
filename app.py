@@ -230,8 +230,7 @@ new_datum = st.date_input(
     key=f"edit_datum_{record_id}"
 )
 
-
-        new_sati = st.number_input(
+new_sati = st.number_input(
             "Radni sati",
             min_value=0,
             value=int(row["trenutni_radni_sati"]),
