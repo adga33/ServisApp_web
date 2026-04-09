@@ -201,11 +201,13 @@ with tabs[2]:
 
         # ODABIR PREMA ID-u
         record_id = st.selectbox(
-            "Odaberi zapis",
-            ids,
-            format_func=lambda rid: f"{df.loc[rid,'datum']} – {df.loc[rid,'vrsta_unosa']} – {df.loc[rid,'trenutni_radni_sati']} h",
-            key="edit_odabir"
-        )
+    "Odaberi zapis",
+    df.index.tolist(),
+    format_func=lambda rid: f"{df.loc[rid,'datum']} – {df.loc[rid,'vrsta_unosa']} – {df.loc[rid,'trenutni_radni_sati']} h"
+    )
+
+    row = df.loc[record_id]
+
 
         # UVIJEK PRAVI RED
         row = df.loc[record_id]
@@ -259,7 +261,7 @@ with tabs[2]:
         new_ocekivani = int(row["ocekivani_servis"])
         new_do_servisa = new_ocekivani - int(new_sati)
 
-        if st.button("💾 Spremi izmjene", key=f"edit_spremi_{record_id}"):
+        if st.button("💾 Spremi izmjene", key=f"edit_spremi"):
             update_zapis(
                 record_id,
                 new_datum.strftime("%d.%m.%Y"),
@@ -273,7 +275,7 @@ with tabs[2]:
             st.success("Zapis izmijenjen.")
             st.rerun()
 
-        if st.button("🗑️ Obriši zapis", key=f"edit_obrisi_{record_id}"):
+        if st.button("🗑️ Obriši zapis", key=f"edit_obrisi"):
             delete_zapis(record_id)
             st.success("Zapis obrisan.")
             st.rerun()
