@@ -190,6 +190,7 @@ with tabs[1]:
         st.dataframe(df, use_container_width=True)
 
 # ---------------- TAB 3: UREDI ----------------
+# ---------------- TAB 3: UREDI ----------------
 with tabs[2]:
     st.subheader("✏️ Uredi zapis")
 
@@ -231,11 +232,9 @@ with tabs[2]:
         new_sati = st.number_input(
             "Radni sati",
             min_value=0,
-            value=int(pd.to_numeric(row["trenutni_radni_sati"], errors="coerce") or 0),
+            value=int(row["trenutni_radni_sati"]),
             key=f"edit_sati_{record_id}"
         )
-	st.write("DEBUG SATI:", df["trenutni_radni_sati"])
-
 
         vrste = ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"]
 
@@ -292,6 +291,7 @@ with tabs[2]:
             delete_zapis(record_id)
             st.success("Zapis obrisan.")
             st.rerun()
+
 
 # ---------------- TAB 4: DOKUMENTI ----------------
 
