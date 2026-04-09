@@ -199,10 +199,12 @@ with tabs[2]:
         ids = df.index.tolist()
 
         record_id = st.selectbox(
-            "Odaberi zapis",
-            ids,
-            format_func=lambda rid: f"{df.loc[rid,'datum']} – {df.loc[rid,'vrsta_unosa']} – {df.loc[rid,'trenutni_radni_sati']} h"
-        )
+    "Odaberi zapis",
+    ids,
+    format_func=lambda rid: f"{df.loc[rid,'datum']} – {df.loc[rid,'vrsta_unosa']} – {df.loc[rid,'trenutni_radni_sati']} h",
+    key="uredi_record_id"
+)
+
 
         row = df.loc[record_id]
 
@@ -272,7 +274,14 @@ with tabs[3]:
     if df.empty:
         st.info("Nema zapisa.")
     else:
-        rid = st.number_input("Odaberi zapis", min_value=int(df.index.min()), max_value=int(df.index.max()), step=1)
+        rid = st.number_input(
+    "Odaberi zapis",
+    min_value=int(df.index.min()),
+    max_value=int(df.index.max()),
+    step=1,
+    key="dokumenti_rid"
+)
+
         if rid in df.index:
             folder = df.loc[rid, "attachments"]
 
