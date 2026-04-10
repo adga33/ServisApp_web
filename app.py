@@ -89,21 +89,24 @@ rows = get_zapisi(plovilo)
 df = pd.DataFrame(rows)
 
 # Ako je prazan, odmah stani
+df = pd.DataFrame(rows)
+
+# Ako je prazan, odmah prekini
 if df.empty:
     st.info("Nema zapisa.")
     st.stop()
 
-# Pretvori sve stupce u string gdje je potrebno
+# Pretvori sve vrijednosti u čiste stringove
 for col in df.columns:
-    try:
-        df[col] = df[col].astype(str)
-    except:
-        df[col] = df[col].apply(lambda x: str(x) if x is not None else "")
+    df[col] = df[col].apply(lambda x: str(x) if x is not None else "")
 
-# Numeric fallback
+# Numeric stupci
 numeric_cols = ["trenutni_radni_sati", "servis_raden_na", "ocekivani_servis", "do_servisa"]
 for col in numeric_cols:
     df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(int)
+
+df = df.set_index("id")
+
 
 
 required_cols = [
