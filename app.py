@@ -88,7 +88,8 @@ plovilo = st.selectbox("Odaberi plovilo", boats)
 
 rows = get_zapisi(plovilo)
 df = pd.DataFrame(rows)
-# --- FIX: osiguraj da svi stupci postoje ---
+
+# Osiguraj da svi stupci postoje
 required_cols = [
     "id", "plovilo", "datum", "trenutni_radni_sati",
     "servis_raden_na", "ocekivani_servis", "do_servisa",
@@ -97,7 +98,7 @@ required_cols = [
 
 for col in required_cols:
     if col not in df.columns:
-        df[col] = ""  # ili 0 za numeričke, ali kasnije ih pretvaramo
+        df[col] = ""
 
 if df.empty:
     st.info("Nema zapisa za ovo plovilo.")
@@ -257,10 +258,15 @@ with tabs[2]:
 
         vrste = ["Servis", "Tehnički pregled", "Popravak", "Havarija", "Remont", "Izlaz", "Ostalo"]
 
+        # SIGURNO ČITANJE VRSTE UNOSA
+        vrsta_raw = str(row["vrsta_unosa"]).strip()
+        if vrsta_raw not in vrste:
+            vrsta_raw = vrste[0]
+
         new_vrsta = st.selectbox(
             "Vrsta unosa",
             vrste,
-            index=vrste.index(row["vrsta_unosa"]) if row["vrsta_unosa"] in vrste else 0,
+            index=vrste.index(vrsta_raw),
             key=f"vrsta_edit_{record_id}"
         )
 
