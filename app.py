@@ -27,10 +27,11 @@ from utils import (
 # INIT
 # -------------------------------------------------
 
+st.set_page_config(page_title="Servis plovila", layout="wide")
+
 init_tables()
 migrate_database()
 setup_logging()
-st.set_page_config(page_title="Servis plovila", layout="wide")
 
 # -------------------------------------------------
 # LOGIN
@@ -82,52 +83,25 @@ if not boats:
 plovilo = st.selectbox("Odaberi plovilo", boats)
 
 # -------------------------------------------------
-# LOAD DATA
+# LOAD DATA + SANITIZACIJA
 # -------------------------------------------------
 
 rows = get_zapisi(plovilo)
 df = pd.DataFrame(rows)
 
-# Ako je prazan, odmah stani
-df = pd.DataFrame(rows)
-
-# Ako je prazan, odmah prekini
 if df.empty:
-    st.info("Nema zapisa.")
-    st.stop()
+    st.info("Nema zapisa za ovo plovilo.")
+else:
+    # Pretvori sve stupce u čiste stringove
+    for col in df.columns:
+        df[col] = df[col].apply(lambda x: str(x) if x is not None else "")
 
-# Pretvori sve vrijednosti u čiste stringove
-for col in df.columns:
-    df[col] = df[col].apply(lambda x: str(x) if x is not None else "")
-
-# Numeric stupci
-numeric_cols = ["trenutni_radni_sati", "servis_raden_na", "ocekivani_servis", "do_servisa"]
-for col in numeric_cols:
-    df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(int)
-
-df = df.set_index("id")
-
-
-
-required_cols = [
-    "id", "plovilo", "datum", "trenutni_radni_sati",
-    "servis_raden_na", "ocekivani_servis", "do_servisa",
-    "vrsta_unosa", "napomena", "attachments"
-]
-
-for col in required_cols:
-    if col not in df.columns:
-        df[col] = None
-
-if not df.empty:
-    df["id"] = pd.to_numeric(df["id"], errors="coerce")
-    df["napomena"] = df["napomena"].astype(str)
-
+    # Pretvori numeričke stupce
     numeric_cols = ["trenutni_radni_sati", "servis_raden_na", "ocekivani_servis", "do_servisa"]
     for col in numeric_cols:
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(int)
 
-    df = df.sort_values("trenutni_radni_sati", ascending=False)
+    # ID kao index
     df = df.set_index("id")
 
 # -------------------------------------------------
@@ -259,10 +233,15 @@ with tabs[2]:
 
         new_datum = st.date_input("Datum", datum_obj, key=f"datum_edit_{record_id}")
 
+        try:
+            default_sati = int(row["trenutni_radni_sati"])
+        except:
+            default_sati = 0
+
         new_sati = st.number_input(
             "Radni sati",
             min_value=0,
-            value=int(row["trenutni_radni_sati"]),
+            value=default_sati,
             key=f"sati_edit_{record_id}"
         )
 
@@ -311,48 +290,44 @@ with tabs[2]:
 with tabs[3]:
     st.subheader("📎 Dokumenti")
 
-    # Ako nema zapisa, odmah prekini
     if df.empty:
-        st.info("Nema zapisa za ovo plovilo.")
-        st.stop()
+        st.info("Nema zapisa.")
+    else:
+        try:
+            min_id = df.index.min()
+            max_id = df.index.max()
+        except:
+            st.error("Neispravni ID zapisa.")
+            st.stop()
 
-    # Sigurno dohvaćanje min/max ID-a
-    try:
-        min_id = int(df.index.min())
-        max_id = int(df.index.max())
-    except:
-        st.error("Greška: ID zapisa nije valjan.")
-        st.stop()
-
-    rid = st.number_input(
-        "Odaberi zapis",
-        min_value=min_id,
-        max_value=max_id,
-        step=1,
-        key="dokumenti_rid"
-    )
-
-    if rid in df.index:
-        folder = df.loc[rid, "attachments"]
-
-        if folder and os.path.exists(folder):
-            for f in os.listdir(folder):
-                path = os.path.join(folder, f)
-                st.download_button(f"Preuzmi {f}", open(path, "rb").read(), file_name=f)
-
-        new_files = st.file_uploader(
-            "Dodaj dokumente",
-            type=["jpg", "jpeg", "png", "pdf"],
-            accept_multiple_files=True,
-            key=f"dokumenti_upload_{rid}"
+        rid = st.number_input(
+            "Odaberi zapis",
+            min_value=min_id,
+            max_value=max_id,
+            step=1,
+            key="dokumenti_rid"
         )
 
-        if st.button("📥 Spremi nove dokumente", key=f"dokumenti_spremi_{rid}"):
-            if new_files:
-                add_files_to_record(folder, new_files)
-                st.success("Dokumenti dodani.")
-                st.rerun()
+        if rid in df.index:
+            folder = df.loc[rid, "attachments"]
 
+            if folder and os.path.exists(folder):
+                for f in os.listdir(folder):
+                    path = os.path.join(folder, f)
+                    st.download_button(f"Preuzmi {f}", open(path, "rb").read(), file_name=f)
+
+            new_files = st.file_uploader(
+                "Dodaj dokumente",
+                type=["jpg", "jpeg", "png", "pdf"],
+                accept_multiple_files=True,
+                key=f"dokumenti_upload_{rid}"
+            )
+
+            if st.button("📥 Spremi nove dokumente", key=f"dokumenti_spremi_{rid}"):
+                if new_files:
+                    add_files_to_record(folder, new_files)
+                    st.success("Dokumenti dodani.")
+                    st.rerun()
 
 # -------------------------------------------------
 # TAB 5: TEHNIČKI PREGLED
